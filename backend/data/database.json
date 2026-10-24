@@ -1,0 +1,163 @@
+{
+  "invitation": {
+    "title": "The Wedding of Fajar & Rosa",
+    "couple": {
+      "groom": {
+        "fullName": "Putra Fajar Widianto",
+        "shortName": "Fajar",
+        "father": "Bpk. Sutarno",
+        "mother": "Ibu Supini",
+        "photo": "/images/groom.jpg",
+        "instagram": "",
+        "orderNumber": "Putra pertama dari"
+      },
+      "bride": {
+        "fullName": "Rosa Prisantika Bay Sukur",
+        "shortName": "Rosa",
+        "father": "Bpk. Ahmad Erwin Sukur",
+        "mother": "Ibu Amira",
+        "photo": "/images/bride.jpg",
+        "instagram": "",
+        "orderNumber": "Putri kedua dari"
+      }
+    },
+    "quote": {
+      "arabic": "وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً",
+      "translation": "Dan di antara tanda-tanda (kebesaran)-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya, dan Dia menjadikan di antaramu rasa kasih dan sayang.",
+      "source": "QS. Ar-Rum: 21"
+    },
+    "events": {
+      "countdownTitle": "Menghitung Hari Bahagia",
+      "mapsEmbedUrl": "https://maps.google.com/maps?q=Grand+Asahlan,+Jl.+Tomori,+Kec.+Bacan,+Kabupaten+Halmahera+Selatan&t=&z=16&ie=UTF8&iwloc=&output=embed",
+      "akad": {
+        "title": "Akad Nikah",
+        "date": "2026-11-28",
+        "dateFormatted": "Kamis, 29 Oktober 2026",
+        "time": "09:00  WIT",
+        "venue": "Grand Asahlan",
+        "address": "Jl Tomori, Kec. Bacan, Kabupaten Halmahera Selatan, Maluku Utara",
+        "mapsUrl": "",
+        "calendarTitle": "Akad Nikah Fajar & Rosa"
+      },
+      "resepsi": {
+        "title": "Resepsi Pernikahan",
+        "date": "2026-11-28",
+        "dateFormatted": "Kamis, 29 Oktober 2026",
+        "time": "12:00 WIT",
+        "venue": "Grand Asahlan",
+        "address": "Jl. Tomori, Kec. Bacan, Kabupaten Halmahera Selatan, Maluku Utara",
+        "mapsUrl": "",
+        "calendarTitle": "Resepsi Pernikahan Fajar & Rosa"
+      }
+    },
+    "countdownTarget": "2026-10-29 09:00:00",
+    "loveStories": [
+      {
+        "id": 1,
+        "year": "2021",
+        "title": "Awal Pertemuan",
+        "story": "Takdir mempertemukan kami saat kegiatan sosial kampus. Sebuah percakapan sederhana tentang cita-cita menjadi pintu awal kisah indah ini."
+      },
+      {
+        "id": 2,
+        "year": "2023",
+        "title": "Mulai Berkomitmen",
+        "story": "Setelah saling mengenal karakter, nilai kehidupan, dan impian masa depan, kami bersepakat melangkah dalam ikatan yang lebih serius dengan restu keluarga."
+      },
+      {
+        "id": 3,
+        "year": "2025",
+        "title": "Momen Lamaran",
+        "story": "Dengan penuh rasa syukur dan haru, di hadapan kedua keluarga besar, kami mengikrarkan janji pertunangan untuk melangkah ke jenjang pernikahan."
+      },
+      {
+        "id": 4,
+        "year": "2026",
+        "title": "Hari Bahagia Menuju Halal",
+        "story": "Bismillah, dengan mengharap ridho Allah SWT, kami menyempurnakan separuh agama dalam ikatan suci pernikahan."
+      }
+    ],
+    "gallery": [
+      {
+        "id": 1,
+        "url": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80",
+        "caption": "Cinta Dalam Doa"
+      },
+      {
+        "id": 2,
+        "url": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=800&q=80",
+        "caption": "Langkah Bersama"
+      },
+      {
+        "id": 3,
+        "url": "https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=800&q=80",
+        "caption": "Senyum Bahagia"
+      },
+      {
+        "id": 4,
+        "url": "https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=800&q=80",
+        "caption": "Janji Suci"
+      },
+      {
+        "id": 5,
+        "url": "https://images.unsplash.com/photo-1544077960-604201fe74bc?auto=format&fit=crop&w=800&q=80",
+        "caption": "Hari Penuh Haru"
+      },
+      {
+        "id": 6,
+        "url": "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&w=800&q=80",
+        "caption": "Hingga Ke Surga-Nya"
+      }
+    ],
+    "gifts": {
+      "accounts": [
+        {
+          "bank": "BCA",
+          "accountNumber": "8801234567",
+          "accountName": "Putra Fajar Widianto",
+          "badgeColor": "#0060AF"
+        },
+        {
+          "bank": "Mandiri",
+          "accountNumber": "1370019283741",
+          "accountName": "Rosa Prisantika Bay Sukur",
+          "badgeColor": "#003d79"
+        }
+      ]
+    },
+    "audio": {
+      "url": "https://assets.mixkit.co/music/preview/mixkit-romantic-wedding-love-138.mp3",
+      "title": "Romantic Wedding Melody"
+    },
+    "whatsappTemplate": "Kepada Yth. Bapak/Ibu/Saudara/i:\n*{name}*\n\nAssalamu'alaikum Warahmatullahi Wabarakatuh\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri hari bahagia pernikahan kami:\n\n*Fajar & Rosa*\n\n📅 *Kamis, 29 Oktober 2026*\n📍 *Grand Asahlan, Kabupaten Halmahera Selatan*\n\nUntuk melihat detail rangkaian acara, peta lokasi, buku tamu, dan doa restu, silakan klik tautan undangan digital kami berikut:\n{link}\n\nMerupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir serta memberikan doa restu kepada kami.\n\nWassalamu'alaikum Warahmatullahi Wabarakatuh.\nSalam hangat kami,\n*Fajar & Rosa*"
+  },
+  "wishes": [
+    {
+      "id": "w-1792675353638",
+      "name": "Budi Santoso",
+      "attendance": "hadir",
+      "guestsCount": 1,
+      "message": "Lancar acaranya dan langgeng selamanya 💍",
+      "createdAt": "2026-10-22T13:22:33.638Z",
+      "likes": 0
+    }
+  ],
+  "guests": [
+    {
+      "id": "g-1",
+      "name": "Budi Santoso",
+      "slug": "budi-santoso",
+      "phone": "081234567890",
+      "group": "Sahabat",
+      "confirmed": false
+    },
+    {
+      "id": "g-2",
+      "name": "Bapak Joko & Keluarga",
+      "slug": "bapak-joko-keluarga",
+      "phone": "081298765432",
+      "group": "Keluarga",
+      "confirmed": false
+    }
+  ]
+}
