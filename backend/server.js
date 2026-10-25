@@ -268,9 +268,9 @@ function sanitizeCsvCell(value) {
 // ==========================================
 
 // 1. Get Invitation Configuration (Publik - Tamu membaca data undangan)
-app.get('/api/invitation', (req, res) => {
+app.get('/api/invitation', async (req, res) => {
   try {
-    const info = db.getInvitation();
+    const info = await db.getInvitation();
     res.json({ success: true, data: info });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -278,13 +278,13 @@ app.get('/api/invitation', (req, res) => {
 });
 
 // 2. Update Invitation Configuration (Dilindungi: Wajib Admin)
-app.put('/api/invitation', requireAdminAuth, (req, res) => {
+app.put('/api/invitation', requireAdminAuth, async (req, res) => {
   try {
     // Basic payload verification
     if (!req.body || typeof req.body !== 'object') {
       return res.status(400).json({ success: false, message: 'Payload data tidak valid' });
     }
-    const updated = db.updateInvitation(req.body);
+    const updated = await db.updateInvitation(req.body);
     res.json({ success: true, data: updated, message: 'Data undangan berhasil diperbarui dengan aman' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -353,9 +353,9 @@ app.post('/api/admin/logout', (req, res) => {
 });
 
 // 4. Get Wishes / RSVPs (Publik - Buku Tamu)
-app.get('/api/wishes', (req, res) => {
+app.get('/api/wishes', async (req, res) => {
   try {
-    let wishes = db.getWishes();
+    let wishes = await db.getWishes();
     const { attendance, search } = req.query;
 
     if (attendance && attendance !== 'all') {
@@ -377,7 +377,7 @@ app.get('/api/wishes', (req, res) => {
 });
 
 // 5. Submit a new Wish / RSVP (Publik dengan Rate Limiting anti-spam)
-app.post('/api/wishes', (req, res) => {
+app.post('/api/wishes', async (req, res) => {
   try {
     const clientIp = getClientIp(req);
     // Maksimal 5 ucapan per 2 menit per IP
@@ -394,7 +394,7 @@ app.post('/api/wishes', (req, res) => {
       return res.status(400).json({ success: false, message: 'Nama dan ucapan wajib diisi' });
     }
 
-    const newWish = db.addWish({
+    const newWish = await db.addWish({
       name,
       attendance: attendance || 'hadir',
       guestsCount: guestsCount || 1,
@@ -408,9 +408,9 @@ app.post('/api/wishes', (req, res) => {
 });
 
 // 6. Delete a Wish (Dilindungi: Wajib Admin)
-app.delete('/api/wishes/:id', requireAdminAuth, (req, res) => {
+app.delete('/api/wishes/:id', requireAdminAuth, async (req, res) => {
   try {
-    const success = db.deleteWish(req.params.id);
+    const success = await db.deleteWish(req.params.id);
     res.json({ success: true, message: 'Ucapan berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -418,7 +418,7 @@ app.delete('/api/wishes/:id', requireAdminAuth, (req, res) => {
 });
 
 // 7. Like a Wish (Publik dengan Rate Limiting: maks 30 per menit)
-app.post('/api/wishes/:id/like', (req, res) => {
+app.post('/api/wishes/:id/like', async (req, res) => {
   try {
     const clientIp = getClientIp(req);
     const allowed = checkRateLimit(clientIp, 'wish_like', 30, 60 * 1000);
@@ -426,7 +426,7 @@ app.post('/api/wishes/:id/like', (req, res) => {
       return res.status(429).json({ success: false, message: 'Aktivitas like terlalu cepat.' });
     }
 
-    const updated = db.likeWish(req.params.id);
+    const updated = await db.likeWish(req.params.id);
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Ucapan tidak ditemukan' });
     }
@@ -437,9 +437,9 @@ app.post('/api/wishes/:id/like', (req, res) => {
 });
 
 // 8. Get Guests List (Dilindungi: Wajib Admin - Melindungi privasi nomor WhatsApp tamu)
-app.get('/api/guests', requireAdminAuth, (req, res) => {
+app.get('/api/guests', requireAdminAuth, async (req, res) => {
   try {
-    const guests = db.getGuests();
+    const guests = await db.getGuests();
     res.json({ success: true, data: guests });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -447,10 +447,10 @@ app.get('/api/guests', requireAdminAuth, (req, res) => {
 });
 
 // 8b. Verify Guest by Name or Code (Publik: Hanya mereturn data publik tanpa nomor telepon)
-app.get('/api/guests/verify', (req, res) => {
+app.get('/api/guests/verify', async (req, res) => {
   try {
     const { name, code } = req.query;
-    const guests = db.getGuests();
+    const guests = await db.getGuests();
     if (!name && !code) {
       return res.json({ success: true, verified: false, isGeneral: true });
     }
@@ -478,13 +478,13 @@ app.get('/api/guests/verify', (req, res) => {
 });
 
 // 9. Add Invited Guest (Dilindungi: Wajib Admin)
-app.post('/api/guests', requireAdminAuth, (req, res) => {
+app.post('/api/guests', requireAdminAuth, async (req, res) => {
   try {
     const { name, phone, group } = req.body;
     if (!name || !String(name).trim()) {
       return res.status(400).json({ success: false, message: 'Nama tamu wajib diisi' });
     }
-    const newGuest = db.addGuest({ name, phone, group });
+    const newGuest = await db.addGuest({ name, phone, group });
     res.status(201).json({ success: true, data: newGuest, message: 'Tamu berhasil ditambahkan' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -492,9 +492,9 @@ app.post('/api/guests', requireAdminAuth, (req, res) => {
 });
 
 // 10. Delete Guest (Dilindungi: Wajib Admin)
-app.delete('/api/guests/:id', requireAdminAuth, (req, res) => {
+app.delete('/api/guests/:id', requireAdminAuth, async (req, res) => {
   try {
-    const success = db.deleteGuest(req.params.id);
+    const success = await db.deleteGuest(req.params.id);
     res.json({ success: true, message: 'Tamu berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -502,9 +502,9 @@ app.delete('/api/guests/:id', requireAdminAuth, (req, res) => {
 });
 
 // 11. Dashboard Stats (Dilindungi: Wajib Admin)
-app.get('/api/stats', requireAdminAuth, (req, res) => {
+app.get('/api/stats', requireAdminAuth, async (req, res) => {
   try {
-    const stats = db.getStats();
+    const stats = await db.getStats();
     res.json({ success: true, data: stats });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -512,9 +512,9 @@ app.get('/api/stats', requireAdminAuth, (req, res) => {
 });
 
 // 12. Export RSVPs to CSV (Dilindungi: Wajib Admin + Formula Injection Protection)
-app.get('/api/export/csv', requireAdminAuth, (req, res) => {
+app.get('/api/export/csv', requireAdminAuth, async (req, res) => {
   try {
-    const wishes = db.getWishes();
+    const wishes = await db.getWishes();
     const csvHeader = 'ID,Nama Tamu,Kehadiran,Jumlah Orang,Pesan Ucapan,Waktu Kirim\n';
     const csvRows = wishes.map(w => {
       const sanitizedName = sanitizeCsvCell(w.name || '');

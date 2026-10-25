@@ -1,82 +1,75 @@
 {
   "invitation": {
-    "title": "The Wedding of Fajar & Rosa",
-    "couple": {
-      "groom": {
-        "fullName": "Putra Fajar Widianto",
-        "shortName": "Fajar",
-        "father": "Bpk. Sutarno",
-        "mother": "Ibu Supini",
-        "photo": "/images/groom.jpg",
-        "instagram": "",
-        "orderNumber": "Putra pertama dari"
-      },
-      "bride": {
-        "fullName": "Rosa Prisantika Bay Sukur",
-        "shortName": "Rosa",
-        "father": "Bpk. Ahmad Erwin Sukur",
-        "mother": "Ibu Amira",
-        "photo": "/images/bride.jpg",
-        "instagram": "",
-        "orderNumber": "Putri kedua dari"
-      }
+    "audio": {
+      "url": "https://assets.mixkit.co/music/preview/mixkit-romantic-wedding-love-138.mp3",
+      "title": "Romantic Wedding Melody"
+    },
+    "gifts": {
+      "accounts": [
+        {
+          "bank": "BCA",
+          "badgeColor": "#0060AF",
+          "accountName": "Putra Fajar Widianto",
+          "accountNumber": "8801234567"
+        },
+        {
+          "bank": "Mandiri",
+          "badgeColor": "#003d79",
+          "accountName": "Rosa Prisantika Bay Sukur",
+          "accountNumber": "1370019283741"
+        }
+      ]
     },
     "quote": {
       "arabic": "وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً",
-      "translation": "Dan di antara tanda-tanda (kebesaran)-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya, dan Dia menjadikan di antaramu rasa kasih dan sayang.",
-      "source": "QS. Ar-Rum: 21"
+      "source": "QS. Ar-Rum: 21",
+      "translation": "Dan di antara tanda-tanda (kebesaran)-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya, dan Dia menjadikan di antaramu rasa kasih dan sayang."
+    },
+    "title": "The Wedding of Fajar & Rosa",
+    "couple": {
+      "bride": {
+        "photo": "/images/bride.jpg",
+        "father": "Bpk. Ahmad Erwin Sukur",
+        "mother": "Ibu Amira",
+        "fullName": "Rosa Prisantika Bay Sukur",
+        "instagram": "",
+        "shortName": "Rosa",
+        "orderNumber": "Putri kedua dari"
+      },
+      "groom": {
+        "photo": "/images/groom.jpg",
+        "father": "Bpk. Sutarno",
+        "mother": "Ibu Supini",
+        "fullName": "Putra Fajar Widianto",
+        "instagram": "",
+        "shortName": "Fajar",
+        "orderNumber": "Putra pertama dari"
+      }
     },
     "events": {
-      "countdownTitle": "Menghitung Hari Bahagia",
-      "mapsEmbedUrl": "https://maps.google.com/maps?q=Grand+Asahlan,+Jl.+Tomori,+Kec.+Bacan,+Kabupaten+Halmahera+Selatan&t=&z=16&ie=UTF8&iwloc=&output=embed",
       "akad": {
-        "title": "Akad Nikah",
         "date": "2026-11-28",
-        "dateFormatted": "Kamis, 29 Oktober 2026",
         "time": "09:00  WIT",
+        "title": "Akad Nikah",
         "venue": "Grand Asahlan",
         "address": "Jl Tomori, Kec. Bacan, Kabupaten Halmahera Selatan, Maluku Utara",
         "mapsUrl": "",
-        "calendarTitle": "Akad Nikah Fajar & Rosa"
+        "calendarTitle": "Akad Nikah Fajar & Rosa",
+        "dateFormatted": "Kamis, 29 Oktober 2026"
       },
       "resepsi": {
-        "title": "Resepsi Pernikahan",
         "date": "2026-11-28",
-        "dateFormatted": "Kamis, 29 Oktober 2026",
         "time": "12:00 WIT",
+        "title": "Resepsi Pernikahan",
         "venue": "Grand Asahlan",
         "address": "Jl. Tomori, Kec. Bacan, Kabupaten Halmahera Selatan, Maluku Utara",
         "mapsUrl": "",
-        "calendarTitle": "Resepsi Pernikahan Fajar & Rosa"
-      }
+        "calendarTitle": "Resepsi Pernikahan Fajar & Rosa",
+        "dateFormatted": "Kamis, 29 Oktober 2026"
+      },
+      "mapsEmbedUrl": "https://maps.google.com/maps?q=Grand+Asahlan,+Jl.+Tomori,+Kec.+Bacan,+Kabupaten+Halmahera+Selatan&t=&z=16&ie=UTF8&iwloc=&output=embed",
+      "countdownTitle": "Menghitung Hari Bahagia"
     },
-    "countdownTarget": "2026-10-29 09:00:00",
-    "loveStories": [
-      {
-        "id": 1,
-        "year": "2021",
-        "title": "Awal Pertemuan",
-        "story": "Takdir mempertemukan kami saat kegiatan sosial kampus. Sebuah percakapan sederhana tentang cita-cita menjadi pintu awal kisah indah ini."
-      },
-      {
-        "id": 2,
-        "year": "2023",
-        "title": "Mulai Berkomitmen",
-        "story": "Setelah saling mengenal karakter, nilai kehidupan, dan impian masa depan, kami bersepakat melangkah dalam ikatan yang lebih serius dengan restu keluarga."
-      },
-      {
-        "id": 3,
-        "year": "2025",
-        "title": "Momen Lamaran",
-        "story": "Dengan penuh rasa syukur dan haru, di hadapan kedua keluarga besar, kami mengikrarkan janji pertunangan untuk melangkah ke jenjang pernikahan."
-      },
-      {
-        "id": 4,
-        "year": "2026",
-        "title": "Hari Bahagia Menuju Halal",
-        "story": "Bismillah, dengan mengharap ridho Allah SWT, kami menyempurnakan separuh agama dalam ikatan suci pernikahan."
-      }
-    ],
     "gallery": [
       {
         "id": 1,
@@ -109,26 +102,33 @@
         "caption": "Hingga Ke Surga-Nya"
       }
     ],
-    "gifts": {
-      "accounts": [
-        {
-          "bank": "BCA",
-          "accountNumber": "8801234567",
-          "accountName": "Putra Fajar Widianto",
-          "badgeColor": "#0060AF"
-        },
-        {
-          "bank": "Mandiri",
-          "accountNumber": "1370019283741",
-          "accountName": "Rosa Prisantika Bay Sukur",
-          "badgeColor": "#003d79"
-        }
-      ]
-    },
-    "audio": {
-      "url": "https://assets.mixkit.co/music/preview/mixkit-romantic-wedding-love-138.mp3",
-      "title": "Romantic Wedding Melody"
-    },
+    "loveStories": [
+      {
+        "id": 1,
+        "year": "2021",
+        "story": "Takdir mempertemukan kami saat kegiatan sosial kampus. Sebuah percakapan sederhana tentang cita-cita menjadi pintu awal kisah indah ini.",
+        "title": "Awal Pertemuan"
+      },
+      {
+        "id": 2,
+        "year": "2023",
+        "story": "Setelah saling mengenal karakter, nilai kehidupan, dan impian masa depan, kami bersepakat melangkah dalam ikatan yang lebih serius dengan restu keluarga.",
+        "title": "Mulai Berkomitmen"
+      },
+      {
+        "id": 3,
+        "year": "2025",
+        "story": "Dengan penuh rasa syukur dan haru, di hadapan kedua keluarga besar, kami mengikrarkan janji pertunangan untuk melangkah ke jenjang pernikahan.",
+        "title": "Momen Lamaran"
+      },
+      {
+        "id": 4,
+        "year": "2026",
+        "story": "Bismillah, dengan mengharap ridho Allah SWT, kami menyempurnakan separuh agama dalam ikatan suci pernikahan.",
+        "title": "Hari Bahagia Menuju Halal"
+      }
+    ],
+    "countdownTarget": "2026-10-29 09:00:00",
     "whatsappTemplate": "Kepada Yth. Bapak/Ibu/Saudara/i:\n*{name}*\n\nAssalamu'alaikum Warahmatullahi Wabarakatuh\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri hari bahagia pernikahan kami:\n\n*Fajar & Rosa*\n\n📅 *Kamis, 29 Oktober 2026*\n📍 *Grand Asahlan, Kabupaten Halmahera Selatan*\n\nUntuk melihat detail rangkaian acara, peta lokasi, buku tamu, dan doa restu, silakan klik tautan undangan digital kami berikut:\n{link}\n\nMerupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir serta memberikan doa restu kepada kami.\n\nWassalamu'alaikum Warahmatullahi Wabarakatuh.\nSalam hangat kami,\n*Fajar & Rosa*"
   },
   "wishes": [],
@@ -139,7 +139,8 @@
       "slug": "bapak-joko-keluarga",
       "phone": "081298765432",
       "group": "Keluarga",
-      "confirmed": false
+      "confirmed": false,
+      "createdAt": "2026-10-25T06:50:31.840185+00:00"
     }
   ]
 }

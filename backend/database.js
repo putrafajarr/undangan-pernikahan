@@ -1,5 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const isServerless = Boolean(
   process.env.NETLIFY || 
@@ -289,26 +293,83 @@ function deepMerge(target, source) {
   return target;
 }
 
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
+
+async function supabaseFetch(endpoint, options = {}) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    return null;
+  }
+  try {
+    const url = `${SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/${endpoint}`;
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+    if (!res.ok) {
+      return null;
+    }
+    const text = await res.text();
+    return text ? JSON.parse(text) : true;
+  } catch (err) {
+    return null;
+  }
+}
+
 module.exports = {
-  getInvitation: () => {
+  getInvitation: async () => {
+    const cloud = await supabaseFetch('wedding_config?id=eq.main&select=data');
+    if (cloud && cloud.length > 0 && cloud[0].data) {
+      const db = readDb();
+      db.invitation = cloud[0].data;
+      writeDb(db);
+      return cloud[0].data;
+    }
     const db = readDb();
-    return db.invitation;
+    return db.invitation || defaultData.invitation;
   },
 
-  updateInvitation: (updates) => {
+  updateInvitation: async (updates) => {
     const db = readDb();
     db.invitation = deepMerge(db.invitation, updates);
     writeDb(db);
+
+    await supabaseFetch('wedding_config', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ id: 'main', data: db.invitation, updated_at: new Date().toISOString() })
+    });
+
     return db.invitation;
   },
 
-  getWishes: () => {
+  getWishes: async () => {
+    const cloud = await supabaseFetch('wedding_wishes?order=created_at.desc');
+    if (Array.isArray(cloud)) {
+      const formatted = cloud.map(w => ({
+        id: w.id,
+        name: w.name,
+        attendance: w.attendance,
+        guestsCount: w.guests_count,
+        message: w.message,
+        likes: w.likes,
+        createdAt: w.created_at
+      }));
+      const db = readDb();
+      db.wishes = formatted;
+      writeDb(db);
+      return formatted;
+    }
     const db = readDb();
     return db.wishes || [];
   },
 
-  addWish: (wish) => {
-    const db = readDb();
+  addWish: async (wish) => {
     const cleanName = sanitizeText(wish.name || 'Tamu Undangan', 60);
     const cleanMessage = sanitizeText(wish.message || '', 600);
     const validAttendances = ['hadir', 'tidak_hadir', 'ragu'];
@@ -324,37 +385,79 @@ module.exports = {
       createdAt: new Date().toISOString(),
       likes: 0
     };
+
+    const db = readDb();
     db.wishes = [newWish, ...(db.wishes || [])];
     writeDb(db);
+
+    await supabaseFetch('wedding_wishes', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: newWish.id,
+        name: newWish.name,
+        attendance: newWish.attendance,
+        guests_count: newWish.guestsCount,
+        message: newWish.message,
+        likes: newWish.likes,
+        created_at: newWish.createdAt
+      })
+    });
+
     return newWish;
   },
 
-  deleteWish: (id) => {
+  deleteWish: async (id) => {
     const db = readDb();
-    const initialLen = (db.wishes || []).length;
     db.wishes = (db.wishes || []).filter(w => String(w.id) !== String(id));
     writeDb(db);
-    return db.wishes.length < initialLen || true;
+
+    await supabaseFetch(`wedding_wishes?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+
+    return true;
   },
 
-  likeWish: (id) => {
+  likeWish: async (id) => {
     const db = readDb();
-    const item = (db.wishes || []).find(w => w.id === id);
+    const item = (db.wishes || []).find(w => String(w.id) === String(id));
+    let newLikes = 1;
     if (item) {
       item.likes = (item.likes || 0) + 1;
+      newLikes = item.likes;
       writeDb(db);
-      return item;
     }
-    return null;
+
+    await supabaseFetch(`wedding_wishes?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ likes: newLikes })
+    });
+
+    return item || { id, likes: newLikes };
   },
 
-  getGuests: () => {
+  getGuests: async () => {
+    const cloud = await supabaseFetch('wedding_guests?order=created_at.asc');
+    if (Array.isArray(cloud)) {
+      const formatted = cloud.map(g => ({
+        id: g.id,
+        name: g.name,
+        slug: g.slug,
+        phone: g.phone,
+        group: g.group_name,
+        confirmed: g.confirmed,
+        createdAt: g.created_at
+      }));
+      const db = readDb();
+      db.guests = formatted;
+      writeDb(db);
+      return formatted;
+    }
     const db = readDb();
     return db.guests || [];
   },
 
-  addGuest: (guest) => {
-    const db = readDb();
+  addGuest: async (guest) => {
     const cleanName = sanitizeText(guest.name || 'Tamu', 60);
     const cleanPhone = (guest.phone || '').replace(/[^0-9+\s\-()]/g, '').slice(0, 25);
     const cleanGroup = sanitizeText(guest.group || 'Umum', 40);
@@ -374,33 +477,54 @@ module.exports = {
       confirmed: false,
       createdAt: new Date().toISOString()
     };
+
+    const db = readDb();
     db.guests = [...(db.guests || []), newGuest];
     writeDb(db);
+
+    await supabaseFetch('wedding_guests', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: newGuest.id,
+        name: newGuest.name,
+        slug: newGuest.slug,
+        phone: newGuest.phone,
+        group_name: newGuest.group,
+        confirmed: newGuest.confirmed,
+        created_at: newGuest.createdAt
+      })
+    });
+
     return newGuest;
   },
 
-  deleteGuest: (id) => {
+  deleteGuest: async (id) => {
     const db = readDb();
     const guestToDelete = (db.guests || []).find(g => String(g.id) === String(id));
-    const initialLen = (db.guests || []).length;
     db.guests = (db.guests || []).filter(g => String(g.id) !== String(id));
 
-    // Bersihkan juga ucapan yang dikirimkan oleh tamu ini jika ada
     if (guestToDelete && guestToDelete.name) {
       const cleanGuestName = String(guestToDelete.name).trim().toLowerCase();
       db.wishes = (db.wishes || []).filter(w => {
         return String(w.name || '').trim().toLowerCase() !== cleanGuestName;
       });
+      await supabaseFetch(`wedding_wishes?name=ilike.${encodeURIComponent(guestToDelete.name.trim())}`, {
+        method: 'DELETE'
+      });
     }
 
     writeDb(db);
-    return db.guests.length < initialLen || true;
+
+    await supabaseFetch(`wedding_guests?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+
+    return true;
   },
 
-  getStats: () => {
-    const db = readDb();
-    const wishes = db.wishes || [];
-    const guests = db.guests || [];
+  getStats: async () => {
+    const wishes = await module.exports.getWishes();
+    const guests = await module.exports.getGuests();
 
     const hadirCount = wishes.filter(w => w.attendance === 'hadir').length;
     const tidakHadirCount = wishes.filter(w => w.attendance === 'tidak_hadir').length;
