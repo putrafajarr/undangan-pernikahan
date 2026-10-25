@@ -56,6 +56,58 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
     }
   };
 
+  const getCustomGuests = () => {
+    try {
+      return JSON.parse(localStorage.getItem('wedding_custom_guests') || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const saveCustomGuest = (guest) => {
+    const list = getCustomGuests();
+    if (!list.some((g) => String(g.id) === String(guest.id))) {
+      list.push(guest);
+      localStorage.setItem('wedding_custom_guests', JSON.stringify(list));
+    }
+  };
+
+  const removeCustomGuest = (id) => {
+    const list = getCustomGuests().filter((g) => String(g.id) !== String(id));
+    localStorage.setItem('wedding_custom_guests', JSON.stringify(list));
+  };
+
+  const [sentGuestIds, setSentGuestIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('wedding_sent_guests') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleGuestSent = (id) => {
+    setSentGuestIds((prev) => {
+      const idStr = String(id);
+      const next = prev.includes(idStr)
+        ? prev.filter((x) => x !== idStr)
+        : [...prev, idStr];
+      localStorage.setItem('wedding_sent_guests', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const markGuestAsSent = (id) => {
+    setSentGuestIds((prev) => {
+      const idStr = String(id);
+      if (!prev.includes(idStr)) {
+        const next = [...prev, idStr];
+        localStorage.setItem('wedding_sent_guests', JSON.stringify(next));
+        return next;
+      }
+      return prev;
+    });
+  };
+
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return Boolean(getAdminToken() && localStorage.getItem('wedding_admin_auth') === 'true');
   });
@@ -262,7 +314,14 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
         setWishes((resWishes.data || []).filter((w) => !deletedWishIds.includes(String(w.id))));
       }
       if (resGuests.success) {
-        setGuests((resGuests.data || []).filter((g) => !deletedGuestIds.includes(String(g.id))));
+        const customGuests = getCustomGuests();
+        const mergedGuests = [...(resGuests.data || [])];
+        customGuests.forEach((cg) => {
+          if (!mergedGuests.some((g) => String(g.id) === String(cg.id))) {
+            mergedGuests.push(cg);
+          }
+        });
+        setGuests(mergedGuests.filter((g) => !deletedGuestIds.includes(String(g.id))));
       }
     } catch (err) {
       console.warn('Failed to load admin data:', err);
@@ -426,13 +485,17 @@ Salam hangat kami,
     setTimeout(() => setIsCopiedWa(false), 2500);
   };
 
-  const handleSendWa = (phoneTarget = null, guestNameTarget = null) => {
+  const handleSendWa = (phoneTarget = null, guestNameTarget = null, guestId = null) => {
     const targetName = guestNameTarget || guestNameInput || '[Nama Tamu]';
     let phone = (phoneTarget || guestPhoneInput).replace(/[^0-9]/g, '');
     if (phone.startsWith('0')) {
       phone = '62' + phone.substring(1);
     }
     
+    if (guestId) {
+      markGuestAsSent(guestId);
+    }
+
     const textToSend = compileWaMessage(waTemplate, targetName);
 
     const url = phone
@@ -460,6 +523,7 @@ Salam hangat kami,
       });
       const json = await res.json();
       if (json.success) {
+        saveCustomGuest(json.data);
         setGuests((prev) => [...prev, json.data]);
         showToast(`Tamu "${guestNameInput}" berhasil ditambahkan ke daftar!`);
         setGuestNameInput('');
@@ -482,6 +546,7 @@ Salam hangat kami,
 
     try {
       addDeletedGuestId(id);
+      removeCustomGuest(id);
       if (guest && guest.name) {
         const cleanName = guest.name.trim().toLowerCase();
         const matchingWishes = wishes.filter(
@@ -1098,7 +1163,14 @@ Salam hangat kami,
                         <UserCheck size={18} className="admin-icon-blue" />
                       </div>
                       <div>
-                        <h4 className="card-headline font-serif">Daftar Tamu Tersimpan ({guests.length})</h4>
+                        <h4 className="card-headline font-serif">
+                          Daftar Tamu Tersimpan ({guests.length})
+                          {guests.length > 0 && (
+                            <span className="sent-summary-badge">
+                              ✓ Terkirim: {guests.filter(g => sentGuestIds.includes(String(g.id))).length} / {guests.length}
+                            </span>
+                          )}
+                        </h4>
                         <p className="card-subhead">Daftar tamu yang telah dibuatkan tautan personal</p>
                       </div>
                     </div>
@@ -1127,13 +1199,14 @@ Salam hangat kami,
                         <tr>
                           <th>Nama Tamu</th>
                           <th>No. WhatsApp</th>
+                          <th>Status WA</th>
                           <th className="text-right">Aksi Cepat</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredGuests.length === 0 ? (
                           <tr>
-                            <td colSpan={3} className="table-empty-cell">
+                            <td colSpan={4} className="table-empty-cell">
                               {guests.length === 0 
                                 ? 'Belum ada tamu yang disimpan. Masukkan nama tamu pada form di atas.'
                                 : 'Tidak ditemukan tamu yang cocok dengan pencarian.'}
@@ -1160,10 +1233,30 @@ Salam hangat kami,
                                   <span className="text-muted-dash">-</span>
                                 )}
                               </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleGuestSent(g.id)}
+                                  className={`guest-sent-status-pill ${sentGuestIds.includes(String(g.id)) ? 'sent' : 'unsent'}`}
+                                  title={sentGuestIds.includes(String(g.id)) ? 'Status: Terkirim. Klik untuk ubah ke Belum' : 'Status: Belum Kirim. Klik untuk tandai Terkirim'}
+                                >
+                                  {sentGuestIds.includes(String(g.id)) ? (
+                                    <>
+                                      <CheckCircle size={12} />
+                                      <span>Terkirim</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Clock size={12} />
+                                      <span>Belum Kirim</span>
+                                    </>
+                                  )}
+                                </button>
+                              </td>
                               <td className="text-right">
                                 <div className="table-actions-row">
                                   <button
-                                    onClick={() => handleSendWa(g.phone, g.name)}
+                                    onClick={() => handleSendWa(g.phone, g.name, g.id)}
                                     className="btn-action-wa"
                                     title="Kirim via WhatsApp"
                                   >
@@ -2607,6 +2700,55 @@ Salam hangat kami,
           font-weight: 700;
           padding: 0.18rem 0.6rem;
           border-radius: 50px;
+        }
+
+        .guest-sent-status-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.22rem 0.65rem;
+          border-radius: 50px;
+          font-size: 0.72rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: 1px solid transparent;
+        }
+
+        .guest-sent-status-pill.sent {
+          background: #dcfce7;
+          color: #15803d;
+          border-color: #bbf7d0;
+        }
+
+        .guest-sent-status-pill.sent:hover {
+          background: #bbf7d0;
+          transform: translateY(-1px);
+        }
+
+        .guest-sent-status-pill.unsent {
+          background: #f1f5f9;
+          color: #64748b;
+          border-color: #e2e8f0;
+        }
+
+        .guest-sent-status-pill.unsent:hover {
+          background: #e2e8f0;
+          transform: translateY(-1px);
+        }
+
+        .sent-summary-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #005fd0;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          padding: 0.15rem 0.55rem;
+          border-radius: 50px;
+          margin-left: 0.5rem;
         }
 
         .status-dot {
