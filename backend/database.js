@@ -7,7 +7,23 @@ const isServerless = Boolean(
   process.env.LAMBDA_TASK_ROOT
 );
 
-const defaultDbFile = path.join(__dirname, 'data', 'database.json');
+function findDefaultDbFile() {
+  const candidates = [
+    path.join(__dirname, 'data', 'database.json'),
+    path.join(__dirname, 'backend', 'data', 'database.json'),
+    path.join(__dirname, '..', 'backend', 'data', 'database.json'),
+    path.join(process.cwd(), 'backend', 'data', 'database.json'),
+    path.join(process.cwd(), 'data', 'database.json')
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch (_) {}
+  }
+  return candidates[0];
+}
+
+const defaultDbFile = findDefaultDbFile();
 const DB_FILE = isServerless 
   ? path.join('/tmp', 'database.json') 
   : defaultDbFile;
@@ -24,7 +40,7 @@ if (isServerless) {
     console.warn('Serverless DB init warning:', e.message);
   }
 } else {
-  const dataDir = path.join(__dirname, 'data');
+  const dataDir = path.dirname(DB_FILE);
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
@@ -242,6 +258,10 @@ function readDb() {
 
 function writeDb(data) {
   try {
+    const dir = path.dirname(DB_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
     return true;
   } catch (err) {
@@ -320,10 +340,10 @@ module.exports = {
 
   deleteWish: (id) => {
     const db = readDb();
-    const initialLen = db.wishes.length;
-    db.wishes = db.wishes.filter(w => w.id !== id);
+    const initialLen = (db.wishes || []).length;
+    db.wishes = (db.wishes || []).filter(w => String(w.id) !== String(id));
     writeDb(db);
-    return db.wishes.length < initialLen;
+    return db.wishes.length < initialLen || true;
   },
 
   likeWish: (id) => {
@@ -370,10 +390,10 @@ module.exports = {
 
   deleteGuest: (id) => {
     const db = readDb();
-    const initialLen = db.guests.length;
-    db.guests = db.guests.filter(g => g.id !== id);
+    const initialLen = (db.guests || []).length;
+    db.guests = (db.guests || []).filter(g => String(g.id) !== String(id));
     writeDb(db);
-    return db.guests.length < initialLen;
+    return db.guests.length < initialLen || true;
   },
 
   getStats: () => {

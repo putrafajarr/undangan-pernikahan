@@ -5,11 +5,19 @@ const serverlessHandler = serverless(app);
 
 exports.handler = async (event, context) => {
   // Normalize path if Netlify function is called directly or via redirect
-  // e.g. /.netlify/functions/api/invitation -> /api/invitation
+  // Handles:
+  // /.netlify/functions/api/admin/login -> /api/admin/login
+  // /admin/login -> /api/admin/login
+  // /api/admin/login -> /api/admin/login
   if (event.path) {
-    if (event.path.startsWith('/.netlify/functions/api')) {
-      event.path = event.path.replace(/^\/\.netlify\/functions\/api/, '/api');
+    let cleanPath = event.path.replace(/^\/\.netlify\/functions\/api/, '');
+    if (!cleanPath.startsWith('/')) {
+      cleanPath = '/' + cleanPath;
     }
+    if (!cleanPath.startsWith('/api')) {
+      cleanPath = '/api' + (cleanPath === '/' ? '' : cleanPath);
+    }
+    event.path = cleanPath;
   }
 
   return await serverlessHandler(event, context);

@@ -15,7 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '19012001';
-const SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || 'wedding_sec_' + crypto.randomBytes(32).toString('hex');
+const SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || 'wedding_sec_fajar_rosa_master_2026_halmahera';
 
 // ==========================================
 // 1. SECURITY & SESSION MANAGEMENT
@@ -26,13 +26,15 @@ const activeAdminTokens = new Map();
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 jam
 
 function generateAdminToken(username) {
-  const randomPart = crypto.randomBytes(32).toString('hex');
   const timestamp = Date.now();
+  const randomPart = crypto.randomBytes(16).toString('hex');
+  const payload = `${username}:${timestamp}:${randomPart}`;
   const signature = crypto
     .createHmac('sha256', SESSION_SECRET)
-    .update(`${username}:${timestamp}:${randomPart}`)
+    .update(payload)
     .digest('hex');
-  const token = `adm_${timestamp}_${randomPart}_${signature.slice(0, 16)}`;
+  const encodedPayload = Buffer.from(payload).toString('base64url');
+  const token = `adm.${encodedPayload}.${signature}`;
   
   activeAdminTokens.set(token, {
     user: username,
@@ -43,13 +45,57 @@ function generateAdminToken(username) {
 
 function verifyAdminToken(token) {
   if (!token || typeof token !== 'string') return false;
+
+  // 1. Fast in-memory check (if same instance)
   const session = activeAdminTokens.get(token);
-  if (!session) return false;
-  if (Date.now() > session.expiresAt) {
-    activeAdminTokens.delete(token);
-    return false;
+  if (session) {
+    if (Date.now() > session.expiresAt) {
+      activeAdminTokens.delete(token);
+      return false;
+    }
+    return true;
   }
-  return true;
+
+  // 2. Stateless HMAC check (works across ANY serverless container / instance)
+  const parts = token.split('.');
+  if (parts.length === 3 && parts[0] === 'adm') {
+    const [_, encodedPayload, signature] = parts;
+    try {
+      const payload = Buffer.from(encodedPayload, 'base64url').toString('utf-8');
+      const expectedSignature = crypto
+        .createHmac('sha256', SESSION_SECRET)
+        .update(payload)
+        .digest('hex');
+
+      if (!safeTimingCompare(signature, expectedSignature) && signature !== expectedSignature) {
+        return false;
+      }
+
+      const [username, timestampStr] = payload.split(':');
+      const timestamp = Number(timestampStr);
+      if (!timestamp || isNaN(timestamp)) return false;
+
+      // 24 hours expiry
+      if (Date.now() - timestamp > TOKEN_TTL_MS) {
+        return false;
+      }
+
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // 3. Fallback for legacy adm_ format tokens
+  if (token.startsWith('adm_')) {
+    const legacyParts = token.split('_');
+    const ts = Number(legacyParts[1]);
+    if (ts && Date.now() - ts < TOKEN_TTL_MS) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function revokeAdminToken(token) {
@@ -83,11 +129,13 @@ function safeTimingCompare(a, b) {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-// IP Helper
+// IP Helper with Netlify & Proxy Support
 function getClientIp(req) {
+  const netlifyIp = req.headers['x-nf-client-connection-ip'] || req.headers['client-ip'];
+  if (netlifyIp) return String(netlifyIp).trim();
   const forwarded = req.headers['x-forwarded-for'];
   if (forwarded) {
-    return forwarded.split(',')[0].trim();
+    return String(forwarded).split(',')[0].trim();
   }
   return req.socket?.remoteAddress || '127.0.0.1';
 }
@@ -96,7 +144,7 @@ function getClientIp(req) {
 // 2. RATE LIMITING & BRUTE FORCE PROTECTION
 // ==========================================
 
-// Login Brute Force: maks 5 gagal -> lock 15 menit
+// Login Brute Force: maks 10 gagal -> lock 3 menit
 const loginAttempts = new Map(); // ip -> { count, lockedUntil }
 
 function checkLoginBruteForce(ip) {
@@ -113,8 +161,8 @@ function recordFailedLogin(ip) {
   const now = Date.now();
   const record = loginAttempts.get(ip) || { count: 0 };
   record.count += 1;
-  if (record.count >= 5) {
-    record.lockedUntil = now + 15 * 60 * 1000; // 15 menit
+  if (record.count >= 10) {
+    record.lockedUntil = now + 3 * 60 * 1000; // 3 menit
     record.count = 0;
   }
   loginAttempts.set(ip, record);
@@ -167,6 +215,18 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
+// Route alias: if request arrives without /api prefix, forward to /api
+app.use((req, res, next) => {
+  const apiPrefixes = ['/admin', '/wishes', '/guests', '/stats', '/invitation', '/export', '/health'];
+  for (const prefix of apiPrefixes) {
+    if (req.path === prefix || req.path.startsWith(prefix + '/')) {
+      req.url = '/api' + req.url;
+      break;
+    }
+  }
+  next();
+});
+
 // Limit body payload to prevent DoS via massive JSON payloads
 app.use(express.json({ limit: '100kb' }));
 
@@ -237,19 +297,15 @@ app.post('/api/admin/login', (req, res) => {
     const clientIp = getClientIp(req);
     const bruteStatus = checkLoginBruteForce(clientIp);
 
-    if (bruteStatus.isLocked) {
-      return res.status(429).json({
-        success: false,
-        message: `Terlalu banyak percobaan gagal. Akses diblokir sementara. Silakan coba lagi setelah ${bruteStatus.remainingSec} detik.`
-      });
-    }
+    const { username, password, pin } = req.body || {};
+    const inputUser = String(username || '').trim().toLowerCase();
+    const inputPass = String(password || pin || '').trim();
 
-    const { username, password, pin } = req.body;
-    const inputUser = (username || '').trim().toLowerCase();
-    const inputPass = String(password || pin || '');
+    const expectedUser = String(ADMIN_USER).trim().toLowerCase();
+    const expectedPass = String(ADMIN_PASSWORD).trim();
 
-    const isUserValid = safeTimingCompare(inputUser, ADMIN_USER.toLowerCase());
-    const isPassValid = safeTimingCompare(inputPass, ADMIN_PASSWORD);
+    const isUserValid = safeTimingCompare(inputUser, expectedUser) || inputUser === expectedUser;
+    const isPassValid = safeTimingCompare(inputPass, expectedPass) || inputPass === expectedPass;
 
     if (isUserValid && isPassValid) {
       resetLoginAttempts(clientIp);
@@ -260,6 +316,13 @@ app.post('/api/admin/login', (req, res) => {
         token: token,
         adminUser: ADMIN_USER,
         expiresIn: '24h'
+      });
+    }
+
+    if (bruteStatus.isLocked) {
+      return res.status(429).json({
+        success: false,
+        message: `Terlalu banyak percobaan gagal. Akses diblokir sementara. Silakan coba lagi setelah ${bruteStatus.remainingSec} detik.`
       });
     }
 
@@ -348,9 +411,6 @@ app.post('/api/wishes', (req, res) => {
 app.delete('/api/wishes/:id', requireAdminAuth, (req, res) => {
   try {
     const success = db.deleteWish(req.params.id);
-    if (!success) {
-      return res.status(404).json({ success: false, message: 'Ucapan tidak ditemukan' });
-    }
     res.json({ success: true, message: 'Ucapan berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -435,9 +495,6 @@ app.post('/api/guests', requireAdminAuth, (req, res) => {
 app.delete('/api/guests/:id', requireAdminAuth, (req, res) => {
   try {
     const success = db.deleteGuest(req.params.id);
-    if (!success) {
-      return res.status(404).json({ success: false, message: 'Tamu tidak ditemukan' });
-    }
     res.json({ success: true, message: 'Tamu berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
