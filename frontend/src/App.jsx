@@ -76,10 +76,15 @@ export default function App() {
   const handleOpenInvitation = () => {
     setIsCoverUnlocked(true);
     if (audioRef.current) {
+      audioRef.current.volume = 0.85;
       audioRef.current.play().then(() => {
         setIsPlaying(true);
       }).catch((e) => {
-        console.log('Audio autoplay prevented:', e);
+        console.log('Audio autoplay prevented or error:', e);
+        if (audioRef.current.src !== window.location.origin + '/audio/wedding-song.mp3') {
+          audioRef.current.src = '/audio/wedding-song.mp3';
+          audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        }
       });
     }
 
@@ -97,9 +102,14 @@ export default function App() {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
+      audioRef.current.volume = 0.85;
       audioRef.current.play().then(() => {
         setIsPlaying(true);
-      }).catch(() => {});
+      }).catch((e) => {
+        console.warn('Play attempt failed, reloading source:', e);
+        audioRef.current.src = '/audio/wedding-song.mp3';
+        audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      });
     }
   };
 
@@ -193,19 +203,32 @@ export default function App() {
     };
   }, [isCoverUnlocked]);
 
-  const audioUrl = invitationData?.audio?.url || "https://assets.mixkit.co/music/preview/mixkit-romantic-wedding-love-138.mp3";
+  const audioUrl = (invitationData?.audio?.url && !invitationData.audio.url.includes('mixkit.co'))
+    ? invitationData.audio.url
+    : "/audio/wedding-song.mp3";
 
   return (
     <div className="wedding-app">
       {/* Background Rose Petals Animation */}
       <PetalBackground />
 
-      {/* Hidden Audio Element */}
+      {/* Audio Element with Local Fallback & Events */}
       <audio
         ref={audioRef}
         src={audioUrl}
         loop
         preload="auto"
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onError={() => {
+          console.warn('Audio source failed to load, switching to bundled local audio...');
+          if (audioRef.current) {
+            audioRef.current.src = '/audio/wedding-song.mp3';
+            if (isCoverUnlocked) {
+              audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+            }
+          }
+        }}
       />
 
       {/* Cover / Opening Envelope */}

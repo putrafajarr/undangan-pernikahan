@@ -386,7 +386,9 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
             }))
           : [],
         physicalAddress: invitationData.gifts?.physicalGift?.address || '',
-        audioUrl: invitationData.audio?.url || ''
+        audioUrl: (invitationData.audio?.url && !invitationData.audio.url.includes('mixkit.co'))
+          ? invitationData.audio.url
+          : '/audio/wedding-song.mp3'
       });
     }
   }, [invitationData]);
@@ -1992,8 +1994,11 @@ Salam hangat kami,
                         value={settingsForm.audioUrl}
                         onChange={(e) => setSettingsForm({ ...settingsForm, audioUrl: e.target.value })}
                         className="admin-input modern-input font-mono"
-                        placeholder="https://assets.mixkit.co/music/preview/..."
+                        placeholder="/audio/wedding-song.mp3 atau https://..."
                       />
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                        🎵 Musik bawaan lokal tersimpan di <code>/audio/wedding-song.mp3</code> (otomatis diputar saat undangan dibuka).
+                      </p>
                     </div>
                   </div>
 

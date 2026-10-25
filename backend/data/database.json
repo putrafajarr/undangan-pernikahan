@@ -1,7 +1,7 @@
 {
   "invitation": {
     "audio": {
-      "url": "https://assets.mixkit.co/music/preview/mixkit-romantic-wedding-love-138.mp3",
+      "url": "/audio/wedding-song.mp3",
       "title": "Romantic Wedding Melody"
     },
     "gifts": {
@@ -74,5 +74,15 @@
     "whatsappTemplate": "Kepada Yth. Bapak/Ibu/Saudara/i:\n*{name}*\n\nAssalamu'alaikum Warahmatullahi Wabarakatuh\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri hari bahagia pernikahan kami:\n\n*Fajar & Rosa*\n\n📅 *Kamis, 29 Oktober 2026*\n📍 *Grand Asahlan, Kabupaten Halmahera Selatan*\n\nUntuk melihat detail rangkaian acara, peta lokasi, buku tamu, dan doa restu, silakan klik tautan undangan digital kami berikut:\n{link}\n\nMerupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir serta memberikan doa restu kepada kami.\n\nWassalamu'alaikum Warahmatullahi Wabarakatuh.\nSalam hangat kami,\n*Fajar & Rosa*"
   },
   "wishes": [],
-  "guests": []
+  "guests": [
+    {
+      "id": "g-1792913420929",
+      "name": "Bapak Ahmad & Istri",
+      "slug": "bapak-ahmad-istri",
+      "phone": "081122334455",
+      "group": "Umum",
+      "confirmed": false,
+      "createdAt": "2026-10-25T07:30:20.929+00:00"
+    }
+  ]
 }
