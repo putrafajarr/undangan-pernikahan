@@ -440,5 +440,103 @@ module.exports = {
       totalPorsiHadir,
       totalInvitedGuests: guests.length
     };
+  },
+
+  createAudioUploadUrl: async (filename, contentType = 'audio/mpeg') => {
+    const ext = path.extname(filename || 'song.mp3') || '.mp3';
+    const cleanExt = ['.mp3', '.m4a', '.wav', '.ogg'].includes(ext.toLowerCase()) ? ext.toLowerCase() : '.mp3';
+    const rawBase = path.basename(filename || 'song', ext).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
+    const safeBase = rawBase || 'wedding_song';
+    const safeFilename = `${safeBase}_${Date.now()}${cleanExt}`;
+    const storagePath = `audio/${safeFilename}`;
+
+    if (SUPABASE_URL && SUPABASE_KEY) {
+      try {
+        const signUrl = `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/upload/sign/wedding_assets/${storagePath}`;
+        const res = await fetch(signUrl, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({})
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const uploadUrl = `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1${data.url}`;
+          const publicUrl = `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/wedding_assets/${storagePath}`;
+          return {
+            success: true,
+            uploadUrl,
+            publicUrl,
+            filename: safeFilename
+          };
+        }
+      } catch (err) {
+        console.warn('Supabase sign URL error:', err.message);
+      }
+    }
+
+    return {
+      success: false,
+      message: 'Supabase storage belum terhubung'
+    };
+  },
+
+  uploadAudioDirect: async (filename, buffer, contentType = 'audio/mpeg') => {
+    const ext = path.extname(filename || 'song.mp3') || '.mp3';
+    const cleanExt = ['.mp3', '.m4a', '.wav', '.ogg'].includes(ext.toLowerCase()) ? ext.toLowerCase() : '.mp3';
+    const rawBase = path.basename(filename || 'song', ext).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
+    const safeBase = rawBase || 'wedding_song';
+    const safeFilename = `${safeBase}_${Date.now()}${cleanExt}`;
+    const storagePath = `audio/${safeFilename}`;
+
+    let publicUrl = null;
+    if (SUPABASE_URL && SUPABASE_KEY) {
+      try {
+        const uploadEndpoint = `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/wedding_assets/${storagePath}`;
+        const res = await fetch(uploadEndpoint, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': contentType || 'audio/mpeg',
+            'x-upsert': 'true'
+          },
+          body: buffer
+        });
+        if (res.ok) {
+          publicUrl = `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/wedding_assets/${storagePath}`;
+        }
+      } catch (e) {
+        console.warn('Direct Supabase upload error:', e.message);
+      }
+    }
+
+    if (!isServerless) {
+      try {
+        const localAudioDir = path.join(__dirname, '..', 'frontend', 'public', 'audio');
+        if (!fs.existsSync(localAudioDir)) {
+          fs.mkdirSync(localAudioDir, { recursive: true });
+        }
+        fs.writeFileSync(path.join(localAudioDir, safeFilename), buffer);
+        if (!publicUrl) {
+          publicUrl = `/audio/${safeFilename}`;
+        }
+      } catch (e) {
+        console.warn('Local audio save error:', e.message);
+      }
+    }
+
+    if (!publicUrl) {
+      throw new Error('Gagal menyimpan file audio ke storage');
+    }
+
+    return {
+      success: true,
+      publicUrl,
+      filename: safeFilename
+    };
   }
 };

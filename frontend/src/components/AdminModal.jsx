@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Users, CheckCircle, XCircle, Utensils, MessageSquare, 
   Download, Share2, Send, Trash2, Settings, Sparkles, Lock, 
   Unlock, Plus, Phone, ExternalLink, RefreshCw, ShieldCheck,
   MapPin, Navigation, CreditCard, Search, Copy, Check, 
   Calendar, Clock, Music, Save, UserCheck, Heart, AlertCircle,
-  Edit3, RotateCcw, Quote
+  Edit3, RotateCcw, Quote, Upload, Play, Pause, Volume2
 } from 'lucide-react';
 import { getApiUrl } from '../config/api';
 
@@ -194,6 +194,144 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Audio upload & preview state
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [audioUploadProgress, setAudioUploadProgress] = useState('');
+  const [previewPlaying, setPreviewPlaying] = useState(false);
+  const previewAudioRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const isYouTubeUrl = (url) => {
+    if (!url || typeof url !== 'string') return false;
+    return url.includes('youtube.com') || url.includes('youtu.be');
+  };
+
+  const handleAudioFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/x-m4a', 'audio/m4a'];
+    const isAudio = validTypes.includes(file.type) || file.name.match(/\.(mp3|m4a|wav|ogg)$/i);
+    if (!isAudio) {
+      showToast('Harap pilih file audio berformat .mp3, .m4a, atau .wav');
+      return;
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      showToast('Ukuran file maksimal 25 MB');
+      return;
+    }
+
+    setIsUploadingAudio(true);
+    setAudioUploadProgress('Menghubungkan ke storage...');
+
+    try {
+      // 1. Dapatkan signed upload URL untuk Supabase Storage
+      const signRes = await adminFetch('/api/audio/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type || 'audio/mpeg'
+        })
+      });
+
+      const signJson = await signRes.json();
+      let uploadedPublicUrl = null;
+
+      if (signJson.success && signJson.uploadUrl) {
+        setAudioUploadProgress(`Mengunggah "${file.name}"...`);
+        const putRes = await fetch(signJson.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type || 'audio/mpeg' },
+          body: file
+        });
+
+        if (putRes.ok) {
+          uploadedPublicUrl = signJson.publicUrl;
+        }
+      }
+
+      // 2. Fallback direct upload jika signed URL terkendala
+      if (!uploadedPublicUrl) {
+        setAudioUploadProgress('Mengunggah ke server cadangan...');
+        const base64Data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const directRes = await adminFetch('/api/audio/upload-direct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: file.name,
+            base64Data,
+            contentType: file.type || 'audio/mpeg'
+          })
+        });
+        const directJson = await directRes.json();
+        if (directJson.success) {
+          uploadedPublicUrl = directJson.publicUrl;
+        } else {
+          throw new Error(directJson.message || 'Gagal mengupload audio');
+        }
+      }
+
+      if (uploadedPublicUrl) {
+        setSettingsForm(prev => ({
+          ...prev,
+          audioUrl: uploadedPublicUrl
+        }));
+        if (previewAudioRef.current) {
+          previewAudioRef.current.pause();
+          setPreviewPlaying(false);
+        }
+        showToast(`Lagu "${file.name}" berhasil diupload! Klik "Simpan Semua Perubahan" untuk mengaktifkan.`);
+      }
+    } catch (err) {
+      console.error('Audio upload error:', err);
+      showToast(`Gagal mengunggah audio: ${err.message || 'Kesalahan jaringan'}`);
+    } finally {
+      setIsUploadingAudio(false);
+      setAudioUploadProgress('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleResetToDefaultAudio = () => {
+    setSettingsForm(prev => ({
+      ...prev,
+      audioUrl: '/audio/wedding-song.mp3'
+    }));
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      setPreviewPlaying(false);
+    }
+    showToast('Musik dikembalikan ke lagu bawaan romantis!');
+  };
+
+  const handleTogglePreviewAudio = () => {
+    if (!previewAudioRef.current) return;
+    if (previewPlaying) {
+      previewAudioRef.current.pause();
+      setPreviewPlaying(false);
+    } else {
+      const targetSrc = settingsForm.audioUrl || '/audio/wedding-song.mp3';
+      if (isYouTubeUrl(targetSrc)) {
+        showToast('Link YouTube tidak dapat diputar sebagai audio preview!');
+        return;
+      }
+      previewAudioRef.current.src = targetSrc;
+      previewAudioRef.current.play().then(() => {
+        setPreviewPlaying(true);
+      }).catch(() => {
+        showToast('Gagal memutar audio preview');
+      });
+    }
   };
 
   // Helper actions for dynamic bank accounts
@@ -1982,24 +2120,244 @@ Salam hangat kami,
                         </div>
                         <div>
                           <h4 className="card-headline font-serif">Musik Latar (Audio Background)</h4>
-                          <p className="card-subhead">Tautan file audio MP3 yang diputar otomatis saat undangan dibuka</p>
+                          <p className="card-subhead">Upload file audio MP3 yang diputar otomatis saat undangan dibuka</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="form-field-group">
-                      <label className="field-label">URL File Audio / Musik (.mp3)</label>
+                    {/* Alert jika terdeteksi link YouTube */}
+                    {isYouTubeUrl(settingsForm.audioUrl) && (
+                      <div style={{
+                        background: '#fef2f2',
+                        border: '1.5px solid #f87171',
+                        borderRadius: '12px',
+                        padding: '0.85rem 1rem',
+                        marginBottom: '1rem',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '0.75rem'
+                      }}>
+                        <AlertCircle size={20} style={{ color: '#dc2626', flexShrink: 0, marginTop: '2px' }} />
+                        <div style={{ fontSize: '0.82rem', color: '#991b1b', lineHeight: '1.45' }}>
+                          <strong>Tautan YouTube Terdeteksi!</strong>
+                          <p style={{ margin: '0.2rem 0 0 0' }}>
+                            Link video YouTube tidak dapat diputar langsung oleh browser sebagai audio latar web. Silakan klik tombol <strong>"Pilih & Upload File Lagu"</strong> di bawah untuk mengunggah file MP3 lagu pernikahan Anda secara langsung.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Kotak Area Upload Lagu */}
+                    <div style={{
+                      background: '#f8fafc',
+                      border: '2px dashed #005FD0',
+                      borderRadius: '14px',
+                      padding: '1.4rem 1.2rem',
+                      textAlign: 'center',
+                      marginBottom: '1.2rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.75rem',
+                      transition: 'all 0.2s ease'
+                    }}>
+                      <div style={{
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '50%',
+                        background: 'rgba(0, 95, 208, 0.12)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#005FD0'
+                      }}>
+                        <Upload size={24} />
+                      </div>
+
+                      <div>
+                        <h5 style={{ margin: '0 0 0.25rem 0', fontSize: '0.98rem', fontWeight: 700, color: '#1e293b' }}>
+                          Upload Lagu Pernikahan Anda
+                        </h5>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
+                          Format didukung: <strong>.MP3, .M4A, .WAV</strong> (Maksimal 25 MB)
+                        </p>
+                      </div>
+
                       <input
-                        type="text"
-                        value={settingsForm.audioUrl}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, audioUrl: e.target.value })}
-                        className="admin-input modern-input font-mono"
-                        placeholder="/audio/wedding-song.mp3 atau https://..."
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleAudioFileUpload}
+                        accept="audio/*,.mp3,.m4a,.wav,.ogg"
+                        style={{ display: 'none' }}
+                        id="input-audio-file"
                       />
-                      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                        🎵 Musik bawaan lokal tersimpan di <code>/audio/wedding-song.mp3</code> (otomatis diputar saat undangan dibuka).
-                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingAudio}
+                        className="btn-gold"
+                        id="btn-upload-audio-file"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.7rem 1.4rem',
+                          borderRadius: '50px',
+                          fontWeight: 700,
+                          fontSize: '0.86rem',
+                          cursor: isUploadingAudio ? 'wait' : 'pointer'
+                        }}
+                      >
+                        {isUploadingAudio ? (
+                          <>
+                            <RefreshCw size={16} className="spin-slow" />
+                            <span>{audioUploadProgress || 'Mengupload Lagu...'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={16} />
+                            <span>Pilih & Upload File Lagu (.mp3)</span>
+                          </>
+                        )}
+                      </button>
+
+                      {isUploadingAudio && (
+                        <div style={{ width: '100%', maxWidth: '280px', marginTop: '0.2rem' }}>
+                          <div style={{ height: '5px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', background: '#005FD0', width: '80%', animation: 'pulse 1.5s infinite' }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Kartu Status Lagu Aktif & Preview Player */}
+                    <div style={{
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '1rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.8rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                          <div style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '50%',
+                            background: '#eff6ff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#005FD0',
+                            flexShrink: 0
+                          }}>
+                            <Volume2 size={18} />
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
+                              Lagu Aktif Saat Ini
+                            </span>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
+                              {settingsForm.audioUrl === '/audio/wedding-song.mp3' || !settingsForm.audioUrl
+                                ? '🎵 Musik Bawaan (Romantic Piano Melody)'
+                                : isYouTubeUrl(settingsForm.audioUrl)
+                                ? '❌ Link YouTube (Tidak bisa diputar)'
+                                : '✨ Lagu Kustom Pengantin (Tersimpan di Cloud)'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {/* Tombol Preview Putar / Jeda */}
+                          <button
+                            type="button"
+                            onClick={handleTogglePreviewAudio}
+                            className="btn-secondary"
+                            id="btn-preview-audio"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              padding: '0.48rem 0.95rem',
+                              borderRadius: '50px',
+                              fontSize: '0.78rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            {previewPlaying ? (
+                              <>
+                                <Pause size={14} style={{ color: '#005FD0' }} />
+                                <span>Jeda Lagu</span>
+                              </>
+                            ) : (
+                              <>
+                                <Play size={14} style={{ color: '#005FD0' }} />
+                                <span>Putar Preview</span>
+                              </>
+                            )}
+                          </button>
+
+                          {/* Tombol Reset ke Lagu Bawaan */}
+                          {settingsForm.audioUrl && settingsForm.audioUrl !== '/audio/wedding-song.mp3' && (
+                            <button
+                              type="button"
+                              onClick={handleResetToDefaultAudio}
+                              className="btn-secondary"
+                              title="Kembalikan ke lagu romantis bawaan"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                padding: '0.48rem 0.85rem',
+                                borderRadius: '50px',
+                                fontSize: '0.76rem',
+                                color: '#64748b'
+                              }}
+                            >
+                              <RotateCcw size={13} />
+                              <span>Gunakan Lagu Bawaan</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Native Audio Tag untuk Preview */}
+                      <audio
+                        ref={previewAudioRef}
+                        src={settingsForm.audioUrl || '/audio/wedding-song.mp3'}
+                        onEnded={() => setPreviewPlaying(false)}
+                        onPause={() => setPreviewPlaying(false)}
+                        onPlay={() => setPreviewPlaying(true)}
+                      />
+
+                      {/* URL / Path Lagu */}
+                      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            Tautan Audio:
+                          </span>
+                          <span style={{
+                            fontSize: '0.73rem',
+                            fontFamily: 'monospace',
+                            color: isYouTubeUrl(settingsForm.audioUrl) ? '#dc2626' : '#005FD0',
+                            maxWidth: '350px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {settingsForm.audioUrl || '/audio/wedding-song.mp3'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.65rem' }}>
+                      💡 <em>Setelah mengupload lagu, pastikan klik tombol <strong>"Simpan Semua Perubahan"</strong> di bawah untuk menerapkan lagu ke undangan.</em>
+                    </p>
                   </div>
 
                   {/* Sticky Bottom Save Action Bar */}

@@ -217,7 +217,7 @@ app.use((req, res, next) => {
 app.use(cors());
 // Route alias: if request arrives without /api prefix, forward to /api
 app.use((req, res, next) => {
-  const apiPrefixes = ['/admin', '/wishes', '/guests', '/stats', '/invitation', '/export', '/health'];
+  const apiPrefixes = ['/admin', '/wishes', '/guests', '/stats', '/invitation', '/export', '/health', '/audio'];
   for (const prefix of apiPrefixes) {
     if (req.path === prefix || req.path.startsWith(prefix + '/')) {
       req.url = '/api' + req.url;
@@ -227,8 +227,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Limit body payload to prevent DoS via massive JSON payloads
-app.use(express.json({ limit: '100kb' }));
+// Dynamic body parser: allows up to 35MB for audio uploads, 250KB for standard requests
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/audio') || req.path.startsWith('/audio')) {
+    return express.json({ limit: '35mb' })(req, res, next);
+  }
+  return express.json({ limit: '250kb' })(req, res, next);
+});
 
 // Serve static images directly from public
 app.use('/images', express.static(path.join(__dirname, '..', 'frontend', 'public', 'images')));
@@ -286,6 +291,36 @@ app.put('/api/invitation', requireAdminAuth, async (req, res) => {
     }
     const updated = await db.updateInvitation(req.body);
     res.json({ success: true, data: updated, message: 'Data undangan berhasil diperbarui dengan aman' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2b. Generate Signed Audio Upload URL (Dilindungi: Wajib Admin)
+app.post('/api/audio/upload-url', requireAdminAuth, async (req, res) => {
+  try {
+    const { filename, contentType } = req.body || {};
+    const result = await db.createAudioUploadUrl(filename, contentType);
+    if (!result.success) {
+      return res.status(500).json(result);
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2c. Direct Audio Upload Fallback (Dilindungi: Wajib Admin)
+app.post('/api/audio/upload-direct', requireAdminAuth, async (req, res) => {
+  try {
+    const { filename, base64Data, contentType } = req.body || {};
+    if (!base64Data) {
+      return res.status(400).json({ success: false, message: 'Data audio (base64) wajib disertakan' });
+    }
+    const cleanBase64 = String(base64Data).replace(/^data:[^;]+;base64,/, '');
+    const buffer = Buffer.from(cleanBase64, 'base64');
+    const result = await db.uploadAudioDirect(filename, buffer, contentType);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

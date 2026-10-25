@@ -7,16 +7,10 @@
     "gifts": {
       "accounts": [
         {
-          "bank": "BCA",
-          "badgeColor": "#0060AF",
-          "accountName": "Putra Fajar Widianto",
-          "accountNumber": "8801234567"
-        },
-        {
-          "bank": "Mandiri",
-          "badgeColor": "#003d79",
-          "accountName": "Rosa Prisantika Bay Sukur",
-          "accountNumber": "1370019283741"
+          "bank": "DANA",
+          "badgeColor": "#118EEA",
+          "accountName": "P**** F**** W****",
+          "accountNumber": "085396821965"
         }
       ]
     },

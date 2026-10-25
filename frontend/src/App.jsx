@@ -203,7 +203,14 @@ export default function App() {
     };
   }, [isCoverUnlocked]);
 
-  const audioUrl = (invitationData?.audio?.url && !invitationData.audio.url.includes('mixkit.co'))
+  const isValidAudioUrl = (url) => {
+    if (!url || typeof url !== 'string') return false;
+    if (url.includes('mixkit.co')) return false;
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return false;
+    return true;
+  };
+
+  const audioUrl = isValidAudioUrl(invitationData?.audio?.url)
     ? invitationData.audio.url
     : "/audio/wedding-song.mp3";
 
