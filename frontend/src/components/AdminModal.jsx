@@ -474,11 +474,27 @@ Salam hangat kami,
   };
 
   const handleDeleteGuest = async (id) => {
-    if (!window.confirm('Hapus tamu ini dari daftar undangan?')) return;
+    const guest = guests.find((g) => String(g.id) === String(id));
+    const confirmMsg = guest
+      ? `Hapus tamu "${guest.name}" dari daftar undangan?\n(Ucapan doa dari tamu ini juga akan otomatis ikut dibersihkan)`
+      : 'Hapus tamu ini dari daftar undangan?';
+    if (!window.confirm(confirmMsg)) return;
+
     try {
       addDeletedGuestId(id);
+      if (guest && guest.name) {
+        const cleanName = guest.name.trim().toLowerCase();
+        const matchingWishes = wishes.filter(
+          (w) => (w.name || '').trim().toLowerCase() === cleanName
+        );
+        matchingWishes.forEach((w) => addDeletedWishId(w.id));
+        setWishes((prev) =>
+          prev.filter((w) => (w.name || '').trim().toLowerCase() !== cleanName)
+        );
+      }
+
       setGuests((prev) => prev.filter((g) => String(g.id) !== String(id)));
-      showToast('Tamu berhasil dihapus');
+      showToast('Tamu dan ucapannya berhasil dihapus');
       await adminFetch(`/api/guests/${id}`, { method: 'DELETE' });
       loadAllData();
     } catch (err) {

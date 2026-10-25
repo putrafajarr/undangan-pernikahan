@@ -381,8 +381,18 @@ module.exports = {
 
   deleteGuest: (id) => {
     const db = readDb();
+    const guestToDelete = (db.guests || []).find(g => String(g.id) === String(id));
     const initialLen = (db.guests || []).length;
     db.guests = (db.guests || []).filter(g => String(g.id) !== String(id));
+
+    // Bersihkan juga ucapan yang dikirimkan oleh tamu ini jika ada
+    if (guestToDelete && guestToDelete.name) {
+      const cleanGuestName = String(guestToDelete.name).trim().toLowerCase();
+      db.wishes = (db.wishes || []).filter(w => {
+        return String(w.name || '').trim().toLowerCase() !== cleanGuestName;
+      });
+    }
+
     writeDb(db);
     return db.guests.length < initialLen || true;
   },
