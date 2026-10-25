@@ -59,7 +59,7 @@ function revokeAdminToken(token) {
 }
 
 // Bersihkan token kedaluwarsa secara berkala (tiap 1 jam)
-setInterval(() => {
+const tokenCleanerTimer = setInterval(() => {
   const now = Date.now();
   for (const [token, data] of activeAdminTokens.entries()) {
     if (now > data.expiresAt) {
@@ -67,6 +67,9 @@ setInterval(() => {
     }
   }
 }, 60 * 60 * 1000);
+if (tokenCleanerTimer.unref) {
+  tokenCleanerTimer.unref();
+}
 
 // Timing-safe comparison untuk mencegah timing attack pada kredensial admin
 function safeTimingCompare(a, b) {
@@ -491,10 +494,14 @@ app.use((req, res, next) => {
   next();
 });
 
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(` Wedding Invitation Server running on port ${PORT}`);
-  console.log(` Local URL : http://localhost:${PORT}`);
-  console.log(` Security Shield : Active (Auth, CSRF/XSS, Rate-Limit)`);
-  console.log(`====================================================`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(` Wedding Invitation Server running on port ${PORT}`);
+    console.log(` Local URL : http://localhost:${PORT}`);
+    console.log(` Security Shield : Active (Auth, CSRF/XSS, Rate-Limit)`);
+    console.log(`====================================================`);
+  });
+}
+
+module.exports = app;

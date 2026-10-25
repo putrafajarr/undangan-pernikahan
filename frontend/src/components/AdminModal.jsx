@@ -7,6 +7,7 @@ import {
   Calendar, Clock, Music, Save, UserCheck, Heart, AlertCircle,
   Edit3, RotateCcw
 } from 'lucide-react';
+import { getApiUrl } from '../config/api';
 
 export default function AdminModal({ isOpen, onClose, invitationData, onUpdateInvitation }) {
   const getAdminToken = () => {
@@ -38,7 +39,7 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
       ...(options.headers || {}),
       'Authorization': `Bearer ${token}`
     };
-    const res = await fetch(url, { ...options, headers });
+    const res = await fetch(getApiUrl(url), { ...options, headers });
     if (res.status === 401) {
       setIsAuthenticated(false);
       setAdminToken('');
@@ -170,7 +171,7 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
     setLoginError('');
 
     try {
-      const res = await fetch('/api/admin/login', {
+      const res = await fetch(getApiUrl('/api/admin/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -199,7 +200,7 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
     try {
       const token = getAdminToken();
       if (token) {
-        await fetch('/api/admin/logout', {
+        await fetch(getApiUrl('/api/admin/logout'), {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -217,7 +218,7 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
     try {
       const [resStats, resWishes, resGuests] = await Promise.all([
         adminFetch('/api/stats').then((r) => r.json()),
-        fetch('/api/wishes').then((r) => r.json()),
+        fetch(getApiUrl('/api/wishes')).then((r) => r.json()),
         adminFetch('/api/guests').then((r) => r.json())
       ]);
 
@@ -837,7 +838,7 @@ Salam hangat kami,
                     </div>
                   </div>
                   <a
-                    href="/api/export/csv"
+                    href={getApiUrl('/api/export/csv')}
                     download="data-rsvp-pernikahan-fajar-rosa.csv"
                     className="btn-gold export-action-btn"
                   >
@@ -1170,7 +1171,7 @@ Salam hangat kami,
                     </div>
 
                     <a 
-                      href={`/api/export/csv?token=${encodeURIComponent(getAdminToken())}`} 
+                      href={getApiUrl(`/api/export/csv?token=${encodeURIComponent(getAdminToken())}`)} 
                       download="data-buku-tamu.csv" 
                       className="btn-outline-gold btn-sm"
                     >

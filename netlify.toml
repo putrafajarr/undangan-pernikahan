@@ -1,0 +1,49 @@
+# Netlify Configuration File
+# Dokumentasi: https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  # Perintah build untuk mengompilasi frontend React dengan Vite
+  command = "npm run build"
+  # Folder output yang akan dipublikasikan ke Netlify CDN
+  publish = "frontend/dist"
+  # Folder untuk Netlify Serverless Functions (Backend Express)
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["backend/data/**"]
+
+# 1. API proxy ke Netlify Serverless Functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# 2. SPA Fallback (semua route React diarahkan ke index.html)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Header keamanan & best practice
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Cache control untuk aset statis agar loading cepat
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"

@@ -11,6 +11,7 @@ import GiftSection from './components/GiftSection';
 import ClosingSection from './components/ClosingSection';
 import AdminModal from './components/AdminModal';
 import { ShieldCheck, Play, Pause } from 'lucide-react';
+import { getApiUrl } from './config/api';
 
 export default function App() {
   const [isCoverUnlocked, setIsCoverUnlocked] = useState(false);
@@ -50,7 +51,7 @@ export default function App() {
 
   // Fetch invitation data from backend API
   const refreshInvitationData = () => {
-    fetch('/api/invitation')
+    fetch(getApiUrl('/api/invitation'))
       .then((res) => res.json())
       .then((json) => {
         if (json.success) {

@@ -16,6 +16,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { getApiUrl } from '../config/api';
 
 export default function RsvpWishSection({ guestName, initialWishes = [] }) {
   const [wishes, setWishes] = useState(initialWishes);
@@ -51,7 +52,7 @@ export default function RsvpWishSection({ guestName, initialWishes = [] }) {
       setFormData((prev) => ({ ...prev, name: guestName }));
 
       if (isNameLocked) {
-        fetch(`/api/guests/verify?name=${encodeURIComponent(guestName)}`)
+        fetch(getApiUrl(`/api/guests/verify?name=${encodeURIComponent(guestName)}`))
           .then((res) => res.json())
           .then((data) => {
             if (data.success && data.verified) {
@@ -78,7 +79,7 @@ export default function RsvpWishSection({ guestName, initialWishes = [] }) {
   // Fetch wishes from backend API
   const fetchWishes = async () => {
     try {
-      const res = await fetch('/api/wishes');
+      const res = await fetch(getApiUrl('/api/wishes'));
       const json = await res.json();
       if (json.success) {
         setWishes(json.data);
@@ -122,7 +123,7 @@ export default function RsvpWishSection({ guestName, initialWishes = [] }) {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/wishes', {
+      const res = await fetch(getApiUrl('/api/wishes'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -191,7 +192,7 @@ export default function RsvpWishSection({ guestName, initialWishes = [] }) {
       );
 
       try {
-        await fetch(`/api/wishes/${id}/like`, { method: 'POST' });
+        await fetch(getApiUrl(`/api/wishes/${id}/like`), { method: 'POST' });
       } catch (err) {
         console.warn('Failed to like on backend:', err);
       }

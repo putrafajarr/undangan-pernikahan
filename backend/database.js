@@ -1,13 +1,35 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_FILE = path.join(__dirname, 'data', 'database.json');
+const isServerless = Boolean(
+  process.env.NETLIFY || 
+  process.env.AWS_LAMBDA_FUNCTION_NAME || 
+  process.env.LAMBDA_TASK_ROOT
+);
+
+const defaultDbFile = path.join(__dirname, 'data', 'database.json');
+const DB_FILE = isServerless 
+  ? path.join('/tmp', 'database.json') 
+  : defaultDbFile;
 
 // Ensure data folder exists
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+if (isServerless) {
+  try {
+    if (!fs.existsSync(DB_FILE)) {
+      if (fs.existsSync(defaultDbFile)) {
+        fs.copyFileSync(defaultDbFile, DB_FILE);
+      }
+    }
+  } catch (e) {
+    console.warn('Serverless DB init warning:', e.message);
+  }
+} else {
+  const dataDir = path.join(__dirname, 'data');
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
 }
+
 
 const defaultData = {
   invitation: {
@@ -201,8 +223,14 @@ const defaultData = {
 function readDb() {
   try {
     if (!fs.existsSync(DB_FILE)) {
-      writeDb(defaultData);
-      return defaultData;
+      if (fs.existsSync(defaultDbFile)) {
+        try {
+          fs.copyFileSync(defaultDbFile, DB_FILE);
+        } catch (_) {}
+      } else {
+        writeDb(defaultData);
+        return defaultData;
+      }
     }
     const raw = fs.readFileSync(DB_FILE, 'utf-8');
     return JSON.parse(raw);
