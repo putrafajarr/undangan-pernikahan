@@ -5,7 +5,7 @@ import {
   Unlock, Plus, Phone, ExternalLink, RefreshCw, ShieldCheck,
   MapPin, Navigation, CreditCard, Search, Copy, Check, 
   Calendar, Clock, Music, Save, UserCheck, Heart, AlertCircle,
-  Edit3, RotateCcw
+  Edit3, RotateCcw, Quote
 } from 'lucide-react';
 import { getApiUrl } from '../config/api';
 
@@ -151,7 +151,7 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
   // WhatsApp Generator form & customizable message template
   const [guestNameInput, setGuestNameInput] = useState('');
   const [guestPhoneInput, setGuestPhoneInput] = useState('');
-  const [guestGroupInput, setGuestGroupInput] = useState('Sahabat');
+  const [guestGroupInput, setGuestGroupInput] = useState('Umum');
   const [waTemplate, setWaTemplate] = useState(() => {
     return localStorage.getItem('wedding_wa_template') || '';
   });
@@ -160,12 +160,17 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
 
   // Settings form state
   const [settingsForm, setSettingsForm] = useState({
+    quoteArabic: '',
+    quoteTranslation: '',
+    quoteSource: '',
     groomFullName: '',
     groomShortName: '',
+    groomOrderNumber: 'Putra pertama dari',
     groomFather: '',
     groomMother: '',
     brideFullName: '',
     brideShortName: '',
+    brideOrderNumber: 'Putri kedua dari',
     brideFather: '',
     brideMother: '',
     countdownTitle: 'Menghitung Hari Bahagia',
@@ -340,21 +345,27 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
     if (invitationData) {
       const groom = invitationData.couple?.groom || {};
       const bride = invitationData.couple?.bride || {};
+      const quote = invitationData.quote || {};
       const akad = invitationData.events?.akad || {};
       const resepsi = invitationData.events?.resepsi || {};
       const rawAccounts = invitationData.gifts?.accounts;
 
       setSettingsForm({
+        quoteArabic: quote.arabic || "وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً",
+        quoteTranslation: quote.translation || "Dan di antara tanda-tanda (kebesaran)-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya, dan Dia menjadikan di antaramu rasa kasih dan sayang.",
+        quoteSource: quote.source || "QS. Ar-Rum: 21",
         groomFullName: groom.fullName || '',
         groomShortName: groom.shortName || '',
+        groomOrderNumber: groom.orderNumber || 'Putra pertama dari',
         groomFather: groom.father || '',
         groomMother: groom.mother || '',
         brideFullName: bride.fullName || '',
         brideShortName: bride.shortName || '',
+        brideOrderNumber: bride.orderNumber || 'Putri kedua dari',
         brideFather: bride.father || '',
         brideMother: bride.mother || '',
         countdownTitle: invitationData.events?.countdownTitle || 'Menghitung Hari Bahagia',
-        countdownTarget: invitationData.countdownTarget || '2026-10-29T09:00:00+09:00',
+        countdownTarget: invitationData.countdownTarget || '2026-10-29 09:00:00',
         akadDate: akad.dateFormatted || '',
         akadTime: akad.time || '',
         akadVenue: akad.venue || '',
@@ -585,11 +596,18 @@ Salam hangat kami,
     setIsSavingSettings(true);
     try {
       const updates = {
+        title: `The Wedding of ${settingsForm.groomShortName || 'Fajar'} & ${settingsForm.brideShortName || 'Rosa'}`,
+        quote: {
+          arabic: settingsForm.quoteArabic,
+          translation: settingsForm.quoteTranslation,
+          source: settingsForm.quoteSource
+        },
         couple: {
           groom: {
             ...invitationData?.couple?.groom,
             fullName: settingsForm.groomFullName,
             shortName: settingsForm.groomShortName,
+            orderNumber: settingsForm.groomOrderNumber,
             father: settingsForm.groomFather,
             mother: settingsForm.groomMother,
             instagram: ''
@@ -598,6 +616,7 @@ Salam hangat kami,
             ...invitationData?.couple?.bride,
             fullName: settingsForm.brideFullName,
             shortName: settingsForm.brideShortName,
+            orderNumber: settingsForm.brideOrderNumber,
             father: settingsForm.brideFather,
             mother: settingsForm.brideMother,
             instagram: ''
@@ -1445,6 +1464,55 @@ Salam hangat kami,
                 
                 <form onSubmit={handleSaveSettings} className="settings-form-layout">
                   
+                  {/* MODUL 0: AYAT SUCI & KUTIPAN PERNIKAHAN */}
+                  <div className="content-card">
+                    <div className="card-header-row">
+                      <div className="card-header-left">
+                        <div className="card-icon-wrap">
+                          <Quote size={18} className="admin-icon-blue" />
+                        </div>
+                        <div>
+                          <h4 className="card-headline font-serif">Kutipan &amp; Ayat Suci Al-Qur'an</h4>
+                          <p className="card-subhead">Teks ayat suci dan terjemahan yang tampil di bagian pembuka undangan</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="form-field-group">
+                      <label className="field-label">Teks Ayat Suci (Bahasa Arab)</label>
+                      <textarea
+                        rows={2}
+                        value={settingsForm.quoteArabic}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, quoteArabic: e.target.value })}
+                        className="admin-textarea modern-input font-serif"
+                        dir="rtl"
+                        placeholder="وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا..."
+                      />
+                    </div>
+
+                    <div className="form-field-group">
+                      <label className="field-label">Arti / Terjemahan Ayat</label>
+                      <textarea
+                        rows={3}
+                        value={settingsForm.quoteTranslation}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, quoteTranslation: e.target.value })}
+                        className="admin-textarea modern-input"
+                        placeholder="Dan di antara tanda-tanda (kebesaran)-Nya ialah Dia menciptakan pasangan-pasangan untukmu..."
+                      />
+                    </div>
+
+                    <div className="form-field-group">
+                      <label className="field-label">Sumber Ayat / Surat</label>
+                      <input
+                        type="text"
+                        value={settingsForm.quoteSource}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, quoteSource: e.target.value })}
+                        className="admin-input modern-input"
+                        placeholder="QS. Ar-Rum: 21"
+                      />
+                    </div>
+                  </div>
+
                   {/* MODUL 1: DATA MEMPELAI (2 KOLOM RAPI) */}
                   <div className="content-card">
                     <div className="card-header-row">
@@ -1454,7 +1522,7 @@ Salam hangat kami,
                         </div>
                         <div>
                           <h4 className="card-headline font-serif">Data Mempelai (Pengantin)</h4>
-                          <p className="card-subhead">Informasi nama lengkap, nama panggilan, dan kedua orang tua pengantin</p>
+                          <p className="card-subhead">Informasi nama lengkap, nama panggilan, urutan anak, dan kedua orang tua pengantin</p>
                         </div>
                       </div>
                     </div>
@@ -1485,6 +1553,17 @@ Salam hangat kami,
                             onChange={(e) => setSettingsForm({ ...settingsForm, groomShortName: e.target.value })}
                             className="admin-input modern-input"
                             placeholder="Fajar"
+                          />
+                        </div>
+
+                        <div className="form-field-group">
+                          <label className="field-label">Keterangan Urutan Anak</label>
+                          <input
+                            type="text"
+                            value={settingsForm.groomOrderNumber}
+                            onChange={(e) => setSettingsForm({ ...settingsForm, groomOrderNumber: e.target.value })}
+                            className="admin-input modern-input"
+                            placeholder="Putra pertama dari"
                           />
                         </div>
 
@@ -1537,6 +1616,17 @@ Salam hangat kami,
                             onChange={(e) => setSettingsForm({ ...settingsForm, brideShortName: e.target.value })}
                             className="admin-input modern-input"
                             placeholder="Rosa"
+                          />
+                        </div>
+
+                        <div className="form-field-group">
+                          <label className="field-label">Keterangan Urutan Anak</label>
+                          <input
+                            type="text"
+                            value={settingsForm.brideOrderNumber}
+                            onChange={(e) => setSettingsForm({ ...settingsForm, brideOrderNumber: e.target.value })}
+                            className="admin-input modern-input"
+                            placeholder="Putri kedua dari"
                           />
                         </div>
 

@@ -48,8 +48,8 @@
     },
     "events": {
       "akad": {
-        "date": "2026-11-28",
-        "time": "09:00  WIT",
+        "date": "2026-10-29",
+        "time": "09:00 WIT",
         "title": "Akad Nikah",
         "venue": "Grand Asahlan",
         "address": "Jl Tomori, Kec. Bacan, Kabupaten Halmahera Selatan, Maluku Utara",
@@ -58,7 +58,7 @@
         "dateFormatted": "Kamis, 29 Oktober 2026"
       },
       "resepsi": {
-        "date": "2026-11-28",
+        "date": "2026-10-29",
         "time": "12:00 WIT",
         "title": "Resepsi Pernikahan",
         "venue": "Grand Asahlan",
@@ -70,77 +70,9 @@
       "mapsEmbedUrl": "https://maps.google.com/maps?q=Grand+Asahlan,+Jl.+Tomori,+Kec.+Bacan,+Kabupaten+Halmahera+Selatan&t=&z=16&ie=UTF8&iwloc=&output=embed",
       "countdownTitle": "Menghitung Hari Bahagia"
     },
-    "gallery": [
-      {
-        "id": 1,
-        "url": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80",
-        "caption": "Cinta Dalam Doa"
-      },
-      {
-        "id": 2,
-        "url": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=800&q=80",
-        "caption": "Langkah Bersama"
-      },
-      {
-        "id": 3,
-        "url": "https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=800&q=80",
-        "caption": "Senyum Bahagia"
-      },
-      {
-        "id": 4,
-        "url": "https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=800&q=80",
-        "caption": "Janji Suci"
-      },
-      {
-        "id": 5,
-        "url": "https://images.unsplash.com/photo-1544077960-604201fe74bc?auto=format&fit=crop&w=800&q=80",
-        "caption": "Hari Penuh Haru"
-      },
-      {
-        "id": 6,
-        "url": "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&w=800&q=80",
-        "caption": "Hingga Ke Surga-Nya"
-      }
-    ],
-    "loveStories": [
-      {
-        "id": 1,
-        "year": "2021",
-        "story": "Takdir mempertemukan kami saat kegiatan sosial kampus. Sebuah percakapan sederhana tentang cita-cita menjadi pintu awal kisah indah ini.",
-        "title": "Awal Pertemuan"
-      },
-      {
-        "id": 2,
-        "year": "2023",
-        "story": "Setelah saling mengenal karakter, nilai kehidupan, dan impian masa depan, kami bersepakat melangkah dalam ikatan yang lebih serius dengan restu keluarga.",
-        "title": "Mulai Berkomitmen"
-      },
-      {
-        "id": 3,
-        "year": "2025",
-        "story": "Dengan penuh rasa syukur dan haru, di hadapan kedua keluarga besar, kami mengikrarkan janji pertunangan untuk melangkah ke jenjang pernikahan.",
-        "title": "Momen Lamaran"
-      },
-      {
-        "id": 4,
-        "year": "2026",
-        "story": "Bismillah, dengan mengharap ridho Allah SWT, kami menyempurnakan separuh agama dalam ikatan suci pernikahan.",
-        "title": "Hari Bahagia Menuju Halal"
-      }
-    ],
     "countdownTarget": "2026-10-29 09:00:00",
     "whatsappTemplate": "Kepada Yth. Bapak/Ibu/Saudara/i:\n*{name}*\n\nAssalamu'alaikum Warahmatullahi Wabarakatuh\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri hari bahagia pernikahan kami:\n\n*Fajar & Rosa*\n\n📅 *Kamis, 29 Oktober 2026*\n📍 *Grand Asahlan, Kabupaten Halmahera Selatan*\n\nUntuk melihat detail rangkaian acara, peta lokasi, buku tamu, dan doa restu, silakan klik tautan undangan digital kami berikut:\n{link}\n\nMerupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir serta memberikan doa restu kepada kami.\n\nWassalamu'alaikum Warahmatullahi Wabarakatuh.\nSalam hangat kami,\n*Fajar & Rosa*"
   },
   "wishes": [],
-  "guests": [
-    {
-      "id": "g-2",
-      "name": "Bapak Joko & Keluarga",
-      "slug": "bapak-joko-keluarga",
-      "phone": "081298765432",
-      "group": "Keluarga",
-      "confirmed": false,
-      "createdAt": "2026-10-25T06:50:31.840185+00:00"
-    }
-  ]
+  "guests": []
 }

@@ -103,60 +103,20 @@ const defaultData = {
         calendarTitle: "Resepsi Pernikahan Fajar & Rosa"
       }
     },
-    countdownTarget: "2026-10-29T09:00:00+09:00",
-    loveStories: [
-      {
-        id: 1,
-        year: "2021",
-        title: "Awal Pertemuan",
-        story: "Takdir mempertemukan kami saat kegiatan sosial kampus. Sebuah percakapan sederhana tentang cita-cita menjadi pintu awal kisah indah ini."
-      },
-      {
-        id: 2,
-        year: "2023",
-        title: "Mulai Berkomitmen",
-        story: "Setelah saling mengenal karakter, nilai kehidupan, dan impian masa depan, kami bersepakat melangkah dalam ikatan yang lebih serius dengan restu keluarga."
-      },
-      {
-        id: 3,
-        year: "2025",
-        title: "Momen Lamaran",
-        story: "Dengan penuh rasa syukur dan haru, di hadapan kedua keluarga besar, kami mengikrarkan janji pertunangan untuk melangkah ke jenjang pernikahan."
-      },
-      {
-        id: 4,
-        year: "2026",
-        title: "Hari Bahagia Menuju Halal",
-        story: "Bismillah, dengan mengharap ridho Allah SWT, kami menyempurnakan separuh agama dalam ikatan suci pernikahan."
-      }
-    ],
-    gallery: [
-      { id: 1, url: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80", caption: "Cinta Dalam Doa" },
-      { id: 2, url: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=800&q=80", caption: "Langkah Bersama" },
-      { id: 3, url: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=800&q=80", caption: "Senyum Bahagia" },
-      { id: 4, url: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=800&q=80", caption: "Janji Suci" },
-      { id: 5, url: "https://images.unsplash.com/photo-1544077960-604201fe74bc?auto=format&fit=crop&w=800&q=80", caption: "Hari Penuh Haru" },
-      { id: 6, url: "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&w=800&q=80", caption: "Hingga Ke Surga-Nya" }
-    ],
+    countdownTarget: "2026-10-29 09:00:00",
     gifts: {
       accounts: [
         {
           bank: "BCA",
-          accountNumber: "8801234567",
+          badgeColor: "#0060AF",
           accountName: "Putra Fajar Widianto",
-          badgeColor: "#0060AF"
+          accountNumber: "8801234567"
         },
         {
           bank: "Mandiri",
-          accountNumber: "1370019283741",
+          badgeColor: "#003d79",
           accountName: "Rosa Prisantika Bay Sukur",
-          badgeColor: "#003d79"
-        },
-        {
-          bank: "BSI (Bank Syariah Indonesia)",
-          accountNumber: "7198273645",
-          accountName: "Fajar & Rosa",
-          badgeColor: "#00A39D"
+          accountNumber: "1370019283741"
         }
       ]
     },
@@ -166,69 +126,8 @@ const defaultData = {
     },
     whatsappTemplate: "Kepada Yth. Bapak/Ibu/Saudara/i:\n*{name}*\n\nAssalamu'alaikum Warahmatullahi Wabarakatuh\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri hari bahagia pernikahan kami:\n\n*Fajar & Rosa*\n\n📅 *Kamis, 29 Oktober 2026*\n📍 *Grand Asahlan, Kabupaten Halmahera Selatan*\n\nUntuk melihat detail rangkaian acara, peta lokasi, buku tamu, dan doa restu, silakan klik tautan undangan digital kami berikut:\n{link}\n\nMerupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir serta memberikan doa restu kepada kami.\n\nWassalamu'alaikum Warahmatullahi Wabarakatuh.\nSalam hangat kami,\n*Fajar & Rosa*"
   },
-  wishes: [
-    {
-      id: "w-1",
-      name: "Drs. H. Mulyadi & Ibu",
-      attendance: "hadir",
-      guestsCount: 1,
-      message: "Barakallahu lakuma wa baraka 'alaikuma wa jama'a bainakuma fi khair. Selamat menempuh hidup baru untuk ananda Fajar dan Rosa, semoga menjadi keluarga sakinah, mawaddah, warahmah.",
-      createdAt: "2026-10-18T10:30:00Z",
-      likes: 12
-    },
-    {
-      id: "w-2",
-      name: "Dimas Anggara & Rekan Kerja",
-      attendance: "hadir",
-      guestsCount: 1,
-      message: "Selamat ya Bro Fajar & Rosa! Akhirnya hari bahagia yang dinanti tiba juga. Lancar sampai hari H, semoga bahagia dan langgeng selamanya!",
-      createdAt: "2026-10-19T08:15:00Z",
-      likes: 8
-    },
-    {
-      id: "w-3",
-      name: "Annisa Larasati",
-      attendance: "hadir",
-      guestsCount: 1,
-      message: "Aaaa selamat Rosa sahabatku tersayang! Terharu banget melihat kalian melangkah ke jenjang pernikahan. Happy wedding beautiful bride!",
-      createdAt: "2026-10-19T14:40:00Z",
-      likes: 15
-    }
-  ],
-  guests: [
-    {
-      id: "g-1",
-      name: "Bapak Joko & Keluarga",
-      slug: "bapak-joko-dan-keluarga",
-      phone: "081234567890",
-      group: "Keluarga",
-      confirmed: true
-    },
-    {
-      id: "g-2",
-      name: "Dimas Anggara",
-      slug: "dimas-anggara",
-      phone: "081298765432",
-      group: "Rekan Kerja",
-      confirmed: true
-    },
-    {
-      id: "g-3",
-      name: "Annisa Larasati",
-      slug: "annisa-larasati",
-      phone: "081377889900",
-      group: "Sahabat",
-      confirmed: true
-    },
-    {
-      id: "g-4",
-      name: "dr. Hendrawan & Istri",
-      slug: "dr-hendrawan-dan-istri",
-      phone: "081566778899",
-      group: "Keluarga",
-      confirmed: false
-    }
-  ]
+  wishes: [],
+  guests: []
 };
 
 function readDb() {
