@@ -61,7 +61,7 @@ export default function Cover({
           id="btn-buka-undangan"
         >
           <MailOpen size={20} />
-          <span>Buka Undangan</span>
+          <span>Buka</span>
         </button>
       </div>
 
