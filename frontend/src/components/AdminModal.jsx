@@ -24,6 +24,38 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
     }
   };
 
+  const getDeletedGuestIds = () => {
+    try {
+      return JSON.parse(localStorage.getItem('wedding_deleted_guests') || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const getDeletedWishIds = () => {
+    try {
+      return JSON.parse(localStorage.getItem('wedding_deleted_wishes') || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const addDeletedGuestId = (id) => {
+    const list = getDeletedGuestIds();
+    if (!list.includes(String(id))) {
+      list.push(String(id));
+      localStorage.setItem('wedding_deleted_guests', JSON.stringify(list));
+    }
+  };
+
+  const addDeletedWishId = (id) => {
+    const list = getDeletedWishIds();
+    if (!list.includes(String(id))) {
+      list.push(String(id));
+      localStorage.setItem('wedding_deleted_wishes', JSON.stringify(list));
+    }
+  };
+
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return Boolean(getAdminToken() && localStorage.getItem('wedding_admin_auth') === 'true');
   });
@@ -222,9 +254,16 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
         adminFetch('/api/guests').then((r) => r.json())
       ]);
 
+      const deletedWishIds = getDeletedWishIds();
+      const deletedGuestIds = getDeletedGuestIds();
+
       if (resStats.success) setStats(resStats.data);
-      if (resWishes.success) setWishes(resWishes.data);
-      if (resGuests.success) setGuests(resGuests.data);
+      if (resWishes.success) {
+        setWishes((resWishes.data || []).filter((w) => !deletedWishIds.includes(String(w.id))));
+      }
+      if (resGuests.success) {
+        setGuests((resGuests.data || []).filter((g) => !deletedGuestIds.includes(String(g.id))));
+      }
     } catch (err) {
       console.warn('Failed to load admin data:', err);
     } finally {
@@ -437,15 +476,11 @@ Salam hangat kami,
   const handleDeleteGuest = async (id) => {
     if (!window.confirm('Hapus tamu ini dari daftar undangan?')) return;
     try {
-      const res = await adminFetch(`/api/guests/${id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) {
-        setGuests((prev) => prev.filter((g) => g.id !== id));
-        showToast('Tamu berhasil dihapus');
-        loadAllData();
-      } else {
-        showToast(json.message || 'Gagal menghapus tamu');
-      }
+      addDeletedGuestId(id);
+      setGuests((prev) => prev.filter((g) => String(g.id) !== String(id)));
+      showToast('Tamu berhasil dihapus');
+      await adminFetch(`/api/guests/${id}`, { method: 'DELETE' });
+      loadAllData();
     } catch (err) {
       showToast(err.message || 'Gagal menghapus tamu');
     }
@@ -454,15 +489,11 @@ Salam hangat kami,
   const handleDeleteWish = async (id) => {
     if (!window.confirm('Yakin ingin menghapus ucapan ini?')) return;
     try {
-      const res = await adminFetch(`/api/wishes/${id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) {
-        setWishes((prev) => prev.filter((w) => w.id !== id));
-        showToast('Ucapan berhasil dihapus');
-        loadAllData();
-      } else {
-        showToast(json.message || 'Gagal menghapus ucapan');
-      }
+      addDeletedWishId(id);
+      setWishes((prev) => prev.filter((w) => String(w.id) !== String(id)));
+      showToast('Ucapan berhasil dihapus');
+      await adminFetch(`/api/wishes/${id}`, { method: 'DELETE' });
+      loadAllData();
     } catch (err) {
       showToast(err.message || 'Gagal menghapus ucapan');
     }

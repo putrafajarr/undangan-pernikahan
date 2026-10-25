@@ -189,15 +189,6 @@ const defaultData = {
       message: "Aaaa selamat Rosa sahabatku tersayang! Terharu banget melihat kalian melangkah ke jenjang pernikahan. Happy wedding beautiful bride!",
       createdAt: "2026-10-19T14:40:00Z",
       likes: 15
-    },
-    {
-      id: "w-4",
-      name: "Budi Santoso, S.T.",
-      attendance: "tidak_hadir",
-      guestsCount: 0,
-      message: "Mohon maaf Fajar & Rosa, bertepatan dengan agenda di luar kota sehingga berhalangan hadir langsung. Doa terbaik untuk keberkahan pernikahan kalian berdua.",
-      createdAt: "2026-10-20T09:00:00Z",
-      likes: 5
     }
   ],
   guests: [

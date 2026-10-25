@@ -82,7 +82,12 @@ export default function RsvpWishSection({ guestName, initialWishes = [] }) {
       const res = await fetch(getApiUrl('/api/wishes'));
       const json = await res.json();
       if (json.success) {
-        setWishes(json.data);
+        let deletedWishIds = [];
+        try {
+          deletedWishIds = JSON.parse(localStorage.getItem('wedding_deleted_wishes') || '[]');
+        } catch {}
+        const filtered = (json.data || []).filter((w) => !deletedWishIds.includes(String(w.id)));
+        setWishes(filtered);
       }
     } catch (err) {
       console.warn('Backend wishes fetch fallback:', err);
