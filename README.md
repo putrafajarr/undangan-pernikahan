@@ -11,7 +11,7 @@ Sistem undangan pernikahan digital modern, responsif, dan elegan dengan integras
 - **Efek Visual Mewah**: Hujan kelopak emas (*golden petals*) dan kilauan partikel halus mengalir di latar belakang.
 - **Musik Latar Belakang (Romantic Melody)**: Pemutar audio mengambang dengan visual piringan hitam emas berputar, dapat di-pause/play kapan saja.
 - **Profil Mempelai Pria & Wanita**: Menampilkan foto asli kedua mempelai dalam bingkai kubah emas, nama lengkap, gelar, orang tua, dan tautan Instagram.
-- **Rangkaian Acara & Countdown**: Hitung mundur otomatis (Hari, Jam, Menit, Detik), jadwal Akad Nikah & Resepsi, tombol *Petunjuk Arah (Google Maps)*, serta tombol *Simpan ke Google Calendar*.
+- **Rangkaian Acara & Countdown**: Hitung mundur otomatis (Hari, Jam, Menit, Detik), jadwal Akad Nikah & Resepsi Makan Siang, tombol *Petunjuk Arah (Google Maps)*, serta tombol *Simpan ke Google Calendar*.
 - **Kisah Cinta (Love Story)**: Linimasa perjalanan cinta dari pertemuan pertama hingga hari pernikahan.
 - **Galeri Foto & Video Lightbox**: Galeri foto pre-wedding dengan pop-up zoom layar penuh dan navigasi slide.
 - **Buku Tamu & RSVP Live**:

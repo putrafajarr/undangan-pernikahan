@@ -93,14 +93,14 @@ const defaultData = {
         calendarTitle: "Akad Nikah Fajar & Rosa"
       },
       resepsi: {
-        title: "Resepsi Pernikahan",
+        title: "Resepsi Makan Siang",
         date: "2026-10-29",
         dateFormatted: "Kamis, 29 Oktober 2026",
         time: "12:00 WIT",
         venue: "Grand Asahlan",
         address: "Jl. Tomori, Kec. Bacan, Kabupaten Halmahera Selatan, Maluku Utara",
         mapsUrl: "",
-        calendarTitle: "Resepsi Pernikahan Fajar & Rosa"
+        calendarTitle: "Resepsi Makan Siang Fajar & Rosa"
       }
     },
     countdownTarget: "2026-10-29 09:00:00",
@@ -143,7 +143,21 @@ function readDb() {
       }
     }
     const raw = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    
+    // Auto-update resepsi title jika masih format lama
+    if (parsed?.invitation?.events?.resepsi) {
+      const curTitle = parsed.invitation.events.resepsi.title;
+      if (!curTitle || curTitle === 'Resepsi Pernikahan' || curTitle === 'Resepsi') {
+        parsed.invitation.events.resepsi.title = 'Resepsi Makan Siang';
+        if (parsed.invitation.events.resepsi.calendarTitle === 'Resepsi Pernikahan Fajar & Rosa') {
+          parsed.invitation.events.resepsi.calendarTitle = 'Resepsi Makan Siang Fajar & Rosa';
+        }
+        writeDb(parsed);
+      }
+    }
+
+    return parsed;
   } catch (err) {
     console.error('Error reading database, resetting to default:', err);
     return defaultData;

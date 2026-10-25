@@ -19,13 +19,17 @@ export default function EventSection({ events, countdownTarget }) {
   };
 
   const resepsi = events?.resepsi || {
-    title: "Resepsi Pernikahan",
+    title: "Resepsi Makan Siang",
     dateFormatted: "Kamis, 29 Oktober 2026",
     time: "12:00 WIT",
     venue: "Grand Asahlan",
     address: "Jl. Tomori, Kec. Bacan, Kabupaten Halmahera Selatan, Maluku Utara",
     mapsUrl: "https://maps.app.goo.gl/zKFEurXn9iAyvT4h6"
   };
+
+  const resepsiTitle = (!resepsi.title || resepsi.title === 'Resepsi Pernikahan' || resepsi.title === 'Resepsi')
+    ? 'Resepsi Makan Siang'
+    : resepsi.title;
 
   // Dynamic Map Embed Resolver
   const getEmbedMapUrl = () => {
@@ -189,11 +193,11 @@ export default function EventSection({ events, countdownTarget }) {
             </div>
           </div>
 
-          {/* Resepsi Pernikahan */}
+          {/* Resepsi Makan Siang */}
           <div className="glass-card event-card">
             <div className="event-header">
               <div className="event-badge font-serif">Walimatul 'Urs</div>
-              <h3 className="event-title font-serif">{resepsi.title}</h3>
+              <h3 className="event-title font-serif">{resepsiTitle}</h3>
             </div>
 
             <div className="event-body">
@@ -218,7 +222,7 @@ export default function EventSection({ events, countdownTarget }) {
 
             <div className="event-actions">
               <a
-                href={createGoogleCalendarLink(resepsi.title, resepsi.venue, resepsi.address)}
+                href={createGoogleCalendarLink(resepsiTitle, resepsi.venue, resepsi.address)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-gold event-btn"

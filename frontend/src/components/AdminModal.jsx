@@ -180,6 +180,7 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
     akadVenue: '',
     akadAddress: '',
     akadMapsUrl: '',
+    resepsiTitle: '',
     resepsiDate: '',
     resepsiTime: '',
     resepsiVenue: '',
@@ -509,6 +510,7 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
         akadVenue: akad.venue || '',
         akadAddress: akad.address || '',
         akadMapsUrl: akad.mapsUrl || '',
+        resepsiTitle: (!resepsi.title || resepsi.title === 'Resepsi Pernikahan' || resepsi.title === 'Resepsi') ? 'Resepsi Makan Siang' : resepsi.title,
         resepsiDate: resepsi.dateFormatted || '',
         resepsiTime: resepsi.time || '',
         resepsiVenue: resepsi.venue || '',
@@ -777,6 +779,7 @@ Salam hangat kami,
           },
           resepsi: {
             ...invitationData?.events?.resepsi,
+            title: settingsForm.resepsiTitle || 'Resepsi Makan Siang',
             dateFormatted: settingsForm.resepsiDate,
             time: settingsForm.resepsiTime,
             venue: settingsForm.resepsiVenue,
@@ -1083,7 +1086,7 @@ Salam hangat kami,
                     <div className="location-item-card">
                       <div className="loc-badge-tag resepsi">
                         <Calendar size={12} />
-                        <span>Resepsi Pernikahan</span>
+                        <span>{invitationData?.events?.resepsi?.title === 'Resepsi Pernikahan' ? 'Resepsi Makan Siang' : (invitationData?.events?.resepsi?.title || 'Resepsi Makan Siang')}</span>
                       </div>
                       <h5 className="loc-title">{invitationData?.events?.resepsi?.venue || "Grand Asahlan"}</h5>
                       <p className="loc-text">{invitationData?.events?.resepsi?.address || "Jl. Tomori, Kec. Bacan, Kabupaten Halmahera Selatan, Maluku Utara"}</p>
@@ -1899,11 +1902,22 @@ Salam hangat kami,
 
                       </div>
 
-                      {/* Sub-panel 2: Resepsi Pernikahan */}
+                      {/* Sub-panel 2: Resepsi Makan Siang */}
                       <div className="form-sub-panel">
                         <div className="sub-panel-header resepsi">
                           <Calendar size={13} />
-                          <span>2. Resepsi Pernikahan</span>
+                          <span>2. Resepsi Makan Siang</span>
+                        </div>
+
+                        <div className="form-field-group">
+                          <label className="field-label">Judul Rangkaian Acara Resepsi</label>
+                          <input
+                            type="text"
+                            value={settingsForm.resepsiTitle}
+                            onChange={(e) => setSettingsForm({ ...settingsForm, resepsiTitle: e.target.value })}
+                            className="admin-input modern-input"
+                            placeholder="Resepsi Makan Siang"
+                          />
                         </div>
 
                         <div className="form-fields-row">
