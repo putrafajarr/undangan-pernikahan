@@ -1427,12 +1427,12 @@ Salam hangat kami,
                                   </button>
                                   <button
                                     onClick={() => {
-                                      const url = `${window.location.origin}${window.location.pathname}?to=${encodeURIComponent(g.name)}`;
-                                      navigator.clipboard.writeText(url);
-                                      showToast(`Tautan khusus untuk ${g.name} berhasil disalin!`);
+                                      const textToCopy = compileWaMessage(waTemplate, g.name);
+                                      navigator.clipboard.writeText(textToCopy);
+                                      showToast(`Pesan undangan lengkap untuk ${g.name} berhasil disalin!`);
                                     }}
                                     className="btn-action-icon"
-                                    title="Salin Tautan Khusus"
+                                    title="Salin Pesan Undangan Lengkap"
                                   >
                                     <Copy size={13} />
                                   </button>
