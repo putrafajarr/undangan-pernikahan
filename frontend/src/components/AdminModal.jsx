@@ -149,12 +149,13 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
 
   // Search & Filter state
   const [guestSearchQuery, setGuestSearchQuery] = useState('');
+  const [guestFilterStatus, setGuestFilterStatus] = useState('all'); // 'all' | 'sent' | 'unsent'
   const [guestCurrentPage, setGuestCurrentPage] = useState(1);
   const GUESTS_PER_PAGE = 50;
 
   useEffect(() => {
     setGuestCurrentPage(1);
-  }, [guestSearchQuery]);
+  }, [guestSearchQuery, guestFilterStatus]);
 
   const [wishSearchQuery, setWishSearchQuery] = useState('');
   const [wishFilterAttendance, setWishFilterAttendance] = useState('all');
@@ -1224,8 +1225,15 @@ Salam hangat kami,
     .filter(w => w.attendance === 'hadir')
     .reduce((sum, w) => sum + (parseInt(w.guestsCount) || 1), 0);
 
+  const sentGuestCount = guests.filter((g) => sentGuestIds.includes(String(g.id))).length;
+  const unsentGuestCount = guests.length - sentGuestCount;
+
   // Filtered lists
   const filteredGuests = guests.filter((g) => {
+    const isSent = sentGuestIds.includes(String(g.id));
+    if (guestFilterStatus === 'sent' && !isSent) return false;
+    if (guestFilterStatus === 'unsent' && isSent) return false;
+
     if (!guestSearchQuery.trim()) return true;
     const q = guestSearchQuery.toLowerCase();
     return (
@@ -1746,31 +1754,59 @@ Salam hangat kami,
                           Daftar Tamu Tersimpan ({guests.length})
                           {guests.length > 0 && (
                             <span className="sent-summary-badge">
-                              ✓ Terkirim: {guests.filter(g => sentGuestIds.includes(String(g.id))).length} / {guests.length}
+                              ✓ Terkirim: {sentGuestCount} / {guests.length}
                             </span>
                           )}
                         </h4>
                         <p className="card-subhead">Daftar tamu yang telah dibuatkan tautan personal</p>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Search Bar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                      <div className="table-search-box">
-                        <Search size={14} className="search-icon" />
-                        <input
-                          type="text"
-                          placeholder="Cari nama atau nomor HP..."
-                          value={guestSearchQuery}
-                          onChange={(e) => setGuestSearchQuery(e.target.value)}
-                          className="table-search-input"
-                        />
-                        {guestSearchQuery && (
-                          <button onClick={() => setGuestSearchQuery('')} className="clear-search-btn">
-                            <X size={13} />
-                          </button>
-                        )}
-                      </div>
+                  {/* Filter Toolbar: Status Terkirim & Pencarian */}
+                  <div className="filter-toolbar-row">
+                    <div className="filter-chips-group">
+                      <button
+                        type="button"
+                        className={`filter-chip ${guestFilterStatus === 'all' ? 'active' : ''}`}
+                        onClick={() => setGuestFilterStatus('all')}
+                      >
+                        Semua ({guests.length})
+                      </button>
+                      <button
+                        type="button"
+                        className={`filter-chip ${guestFilterStatus === 'sent' ? 'active sent' : ''}`}
+                        onClick={() => setGuestFilterStatus('sent')}
+                        title="Tampilkan hanya tamu yang sudah dikirimi undangan WA"
+                      >
+                        <CheckCircle size={12} />
+                        <span>Sudah Terkirim ({sentGuestCount})</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`filter-chip ${guestFilterStatus === 'unsent' ? 'active unsent' : ''}`}
+                        onClick={() => setGuestFilterStatus('unsent')}
+                        title="Tampilkan tamu yang belum dikirimi undangan WA"
+                      >
+                        <Clock size={12} />
+                        <span>Belum Terkirim ({unsentGuestCount})</span>
+                      </button>
+                    </div>
+
+                    <div className="table-search-box">
+                      <Search size={14} className="search-icon" />
+                      <input
+                        type="text"
+                        placeholder="Cari nama atau nomor HP..."
+                        value={guestSearchQuery}
+                        onChange={(e) => setGuestSearchQuery(e.target.value)}
+                        className="table-search-input"
+                      />
+                      {guestSearchQuery && (
+                        <button onClick={() => setGuestSearchQuery('')} className="clear-search-btn" title="Hapus pencarian">
+                          <X size={13} />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -1885,7 +1921,11 @@ Salam hangat kami,
                             <td colSpan={5} className="table-empty-cell">
                               {guests.length === 0 
                                 ? 'Belum ada tamu yang disimpan. Masukkan nama tamu pada form di atas.'
-                                : 'Tidak ditemukan tamu yang cocok dengan pencarian.'}
+                                : guestFilterStatus === 'sent'
+                                  ? 'Belum ada tamu dengan status sudah terkirim.'
+                                  : guestFilterStatus === 'unsent'
+                                    ? 'Semua tamu sudah terkirim! Tidak ada tamu yang belum dikirim.'
+                                    : 'Tidak ditemukan tamu yang cocok dengan pencarian.'}
                             </td>
                           </tr>
                         ) : (
@@ -4577,6 +4617,30 @@ Salam hangat kami,
           border-color: #ffffff;
           font-weight: 800;
           box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .filter-chip.active.sent {
+          background: #ffffff;
+          color: #15803d;
+          border-color: #ffffff;
+        }
+
+        .filter-chip.active.unsent {
+          background: #ffffff;
+          color: #b45309;
+          border-color: #ffffff;
+        }
+
+        .filter-chip.active.hadir {
+          background: #ffffff;
+          color: #15803d;
+          border-color: #ffffff;
+        }
+
+        .filter-chip.active.tidak_hadir {
+          background: #ffffff;
+          color: #be123c;
+          border-color: #ffffff;
         }
 
         .table-search-box {
