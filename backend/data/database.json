@@ -1,7 +1,7 @@
 {
   "invitation": {
     "audio": {
-      "url": "/audio/wedding-song.mp3",
+      "url": "https://fbsodgyxasdgkexqdymz.supabase.co/storage/v1/object/public/wedding_assets/audio/WhatsApp_Video_2026-10-25_at_1_1792925665124.mp3",
       "title": "Romantic Wedding Melody"
     },
     "gifts": {
@@ -28,7 +28,7 @@
         "fullName": "Rosa Prisantika Bay Sukur",
         "instagram": "",
         "shortName": "Rosa",
-        "orderNumber": "Putri kedua dari"
+        "orderNumber": "Putri Pertama dari"
       },
       "groom": {
         "photo": "/images/groom.jpg",
@@ -54,11 +54,11 @@
       "resepsi": {
         "date": "2026-10-29",
         "time": "12:00 WIT",
-        "title": "Resepsi Makan Siang",
+        "title": "Resepsi Pernikahan",
         "venue": "Grand Asahlan",
         "address": "Jl. Tomori, Kec. Bacan, Kabupaten Halmahera Selatan, Maluku Utara",
         "mapsUrl": "",
-        "calendarTitle": "Resepsi Makan Siang Fajar & Rosa",
+        "calendarTitle": "Resepsi Pernikahan Fajar & Rosa",
         "dateFormatted": "Kamis, 29 Oktober 2026"
       },
       "mapsEmbedUrl": "https://maps.google.com/maps?q=Grand+Asahlan,+Jl.+Tomori,+Kec.+Bacan,+Kabupaten+Halmahera+Selatan&t=&z=16&ie=UTF8&iwloc=&output=embed",

@@ -11,6 +11,8 @@ import {
 import * as XLSX from 'xlsx';
 import { getApiUrl } from '../config/api';
 
+const DEFAULT_AUDIO_URL = 'https://fbsodgyxasdgkexqdymz.supabase.co/storage/v1/object/public/wedding_assets/audio/WhatsApp_Video_2026-10-25_at_1_1792925665124.mp3';
+
 export default function AdminModal({ isOpen, onClose, invitationData, onUpdateInvitation }) {
   const getAdminToken = () => {
     return sessionStorage.getItem('wedding_admin_token') || localStorage.getItem('wedding_admin_token') || '';
@@ -331,13 +333,13 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
   const handleResetToDefaultAudio = () => {
     setSettingsForm(prev => ({
       ...prev,
-      audioUrl: '/audio/wedding-song.mp3'
+      audioUrl: DEFAULT_AUDIO_URL
     }));
     if (previewAudioRef.current) {
       previewAudioRef.current.pause();
       setPreviewPlaying(false);
     }
-    showToast('Musik dikembalikan ke lagu bawaan romantis!');
+    showToast('Musik dikembalikan ke lagu utama!');
   };
 
   const handleTogglePreviewAudio = () => {
@@ -346,7 +348,7 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
       previewAudioRef.current.pause();
       setPreviewPlaying(false);
     } else {
-      const targetSrc = settingsForm.audioUrl || '/audio/wedding-song.mp3';
+      const targetSrc = settingsForm.audioUrl || DEFAULT_AUDIO_URL;
       if (isYouTubeUrl(targetSrc)) {
         showToast('Link YouTube tidak dapat diputar sebagai audio preview!');
         return;
@@ -569,7 +571,7 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
         physicalAddress: invitationData.gifts?.physicalGift?.address || '',
         audioUrl: (invitationData.audio?.url && !invitationData.audio.url.includes('mixkit.co'))
           ? invitationData.audio.url
-          : '/audio/wedding-song.mp3'
+          : DEFAULT_AUDIO_URL
       });
     }
   }, [invitationData]);
@@ -2875,11 +2877,9 @@ Salam hangat kami,
                               Lagu Aktif Saat Ini
                             </span>
                             <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
-                              {settingsForm.audioUrl === '/audio/wedding-song.mp3' || !settingsForm.audioUrl
-                                ? '🎵 Musik Bawaan (Romantic Piano Melody)'
-                                : isYouTubeUrl(settingsForm.audioUrl)
+                              {isYouTubeUrl(settingsForm.audioUrl)
                                 ? '❌ Link YouTube (Tidak bisa diputar)'
-                                : '✨ Lagu Kustom Pengantin (Tersimpan di Cloud)'}
+                                : '✨ Lagu Pilihan Pengantin (Tersimpan di Cloud)'}
                             </div>
                           </div>
                         </div>
@@ -2914,13 +2914,13 @@ Salam hangat kami,
                             )}
                           </button>
 
-                          {/* Tombol Reset ke Lagu Bawaan */}
-                          {settingsForm.audioUrl && settingsForm.audioUrl !== '/audio/wedding-song.mp3' && (
+                          {/* Tombol Reset ke Lagu Utama */}
+                          {settingsForm.audioUrl && settingsForm.audioUrl !== DEFAULT_AUDIO_URL && (
                             <button
                               type="button"
                               onClick={handleResetToDefaultAudio}
                               className="btn-secondary"
-                              title="Kembalikan ke lagu romantis bawaan"
+                              title="Kembalikan ke lagu utama"
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -2932,7 +2932,7 @@ Salam hangat kami,
                               }}
                             >
                               <RotateCcw size={13} />
-                              <span>Gunakan Lagu Bawaan</span>
+                              <span>Kembalikan ke Lagu Utama</span>
                             </button>
                           )}
                         </div>
@@ -2941,7 +2941,7 @@ Salam hangat kami,
                       {/* Native Audio Tag untuk Preview */}
                       <audio
                         ref={previewAudioRef}
-                        src={settingsForm.audioUrl || '/audio/wedding-song.mp3'}
+                        src={settingsForm.audioUrl || DEFAULT_AUDIO_URL}
                         onEnded={() => setPreviewPlaying(false)}
                         onPause={() => setPreviewPlaying(false)}
                         onPlay={() => setPreviewPlaying(true)}
@@ -2962,7 +2962,7 @@ Salam hangat kami,
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap'
                           }}>
-                            {settingsForm.audioUrl || '/audio/wedding-song.mp3'}
+                            {settingsForm.audioUrl || DEFAULT_AUDIO_URL}
                           </span>
                         </div>
                       </div>

@@ -81,10 +81,6 @@ export default function App() {
         setIsPlaying(true);
       }).catch((e) => {
         console.log('Audio autoplay prevented or error:', e);
-        if (audioRef.current.src !== window.location.origin + '/audio/wedding-song.mp3') {
-          audioRef.current.src = '/audio/wedding-song.mp3';
-          audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-        }
       });
     }
 
@@ -106,9 +102,7 @@ export default function App() {
       audioRef.current.play().then(() => {
         setIsPlaying(true);
       }).catch((e) => {
-        console.warn('Play attempt failed, reloading source:', e);
-        audioRef.current.src = '/audio/wedding-song.mp3';
-        audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        console.warn('Play attempt failed:', e);
       });
     }
   };
@@ -210,16 +204,18 @@ export default function App() {
     return true;
   };
 
+  const DEFAULT_AUDIO_URL = "https://fbsodgyxasdgkexqdymz.supabase.co/storage/v1/object/public/wedding_assets/audio/WhatsApp_Video_2026-10-25_at_1_1792925665124.mp3";
+
   const audioUrl = isValidAudioUrl(invitationData?.audio?.url)
     ? invitationData.audio.url
-    : "/audio/wedding-song.mp3";
+    : DEFAULT_AUDIO_URL;
 
   return (
     <div className="wedding-app">
       {/* Background Rose Petals Animation */}
       <PetalBackground />
 
-      {/* Audio Element with Local Fallback & Events */}
+      {/* Audio Element with Events */}
       <audio
         ref={audioRef}
         src={audioUrl}
@@ -227,14 +223,8 @@ export default function App() {
         preload="auto"
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
-        onError={() => {
-          console.warn('Audio source failed to load, switching to bundled local audio...');
-          if (audioRef.current) {
-            audioRef.current.src = '/audio/wedding-song.mp3';
-            if (isCoverUnlocked) {
-              audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-            }
-          }
+        onError={(e) => {
+          console.warn('Audio playback error:', e);
         }}
       />
 
