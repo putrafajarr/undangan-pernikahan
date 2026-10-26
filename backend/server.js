@@ -526,6 +526,25 @@ app.post('/api/guests', requireAdminAuth, async (req, res) => {
   }
 });
 
+// 9b. Add Invited Guests in Bulk (Dilindungi: Wajib Admin)
+app.post('/api/guests/bulk', requireAdminAuth, async (req, res) => {
+  try {
+    const { guests } = req.body;
+    if (!Array.isArray(guests) || guests.length === 0) {
+      return res.status(400).json({ success: false, message: 'Daftar tamu tidak boleh kosong' });
+    }
+    const added = await db.addGuestsBulk(guests);
+    res.status(201).json({ 
+      success: true, 
+      count: added.length, 
+      data: added, 
+      message: `${added.length} tamu berhasil ditambahkan` 
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 10. Update Guest (Dilindungi: Wajib Admin)
 app.put('/api/guests/:id', requireAdminAuth, async (req, res) => {
   try {

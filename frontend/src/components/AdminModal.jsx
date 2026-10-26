@@ -5,8 +5,9 @@ import {
   Unlock, Plus, Phone, ExternalLink, RefreshCw, ShieldCheck,
   MapPin, Navigation, CreditCard, Search, Copy, Check, 
   Calendar, Clock, Music, Save, UserCheck, Heart, AlertCircle,
-  Edit3, RotateCcw, Quote, Upload, Play, Pause, Volume2
+  Edit3, RotateCcw, Quote, Upload, Play, Pause, Volume2, FileSpreadsheet
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { getApiUrl } from '../config/api';
 
 export default function AdminModal({ isOpen, onClose, invitationData, onUpdateInvitation }) {
@@ -162,6 +163,15 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
   const [editingGuest, setEditingGuest] = useState(null);
   const [editGuestForm, setEditGuestForm] = useState({ name: '', phone: '' });
   const [isUpdatingGuest, setIsUpdatingGuest] = useState(false);
+
+  // Bulk Import State (Excel & Copy-Paste)
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkActiveTab, setBulkActiveTab] = useState('excel');
+  const [bulkPasteText, setBulkPasteText] = useState('');
+  const [bulkParsedGuests, setBulkParsedGuests] = useState([]);
+  const [isImportingBulk, setIsImportingBulk] = useState(false);
+  const [bulkFileName, setBulkFileName] = useState('');
+  const bulkFileInputRef = useRef(null);
 
   // Settings form state
   const [settingsForm, setSettingsForm] = useState({
@@ -717,6 +727,144 @@ Salam hangat kami,
     }
   };
 
+  // Helper to parse text lines (from paste or CSV)
+  const parseTextToGuests = (text) => {
+    if (!text || !text.trim()) return [];
+    const lines = text.split(/\r?\n/);
+    const results = [];
+    
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      
+      let parts = line.split('\t');
+      if (parts.length < 2) parts = line.split(',');
+      if (parts.length < 2) parts = line.split(';');
+
+      const name = (parts[0] || '').trim();
+      const phone = (parts[1] || '').trim();
+
+      const lower = name.toLowerCase();
+      if (lower === 'nama' || lower === 'nama tamu' || lower === 'name' || lower === 'guest name' || lower === 'nama undangan') {
+        continue;
+      }
+
+      if (name) {
+        results.push({
+          name: name,
+          phone: phone.replace(/[^0-9+\s\-()]/g, '')
+        });
+      }
+    }
+    return results;
+  };
+
+  // Handle Excel file selection (.xlsx, .xls, .csv)
+  const handleExcelFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setBulkFileName(file.name);
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      const parsed = [];
+      let startIdx = 0;
+
+      if (rows.length > 0) {
+        const firstRowStr = (rows[0] || []).join(' ').toLowerCase();
+        if (firstRowStr.includes('nama') || firstRowStr.includes('name') || firstRowStr.includes('phone') || firstRowStr.includes('hp') || firstRowStr.includes('wa')) {
+          startIdx = 1;
+        }
+      }
+
+      for (let i = startIdx; i < rows.length; i++) {
+        const row = rows[i];
+        if (!Array.isArray(row) || row.length === 0) continue;
+        
+        const rawName = String(row[0] || '').trim();
+        const rawPhone = String(row[1] || '').trim();
+
+        if (rawName && rawName.toLowerCase() !== 'nama' && rawName.toLowerCase() !== 'nama tamu') {
+          parsed.push({
+            name: rawName,
+            phone: rawPhone.replace(/[^0-9+\s\-()]/g, '')
+          });
+        }
+      }
+
+      setBulkParsedGuests(parsed);
+      if (parsed.length > 0) {
+        showToast(`Berhasil membaca ${parsed.length} nama dari ${file.name}`);
+      } else {
+        showToast('Tidak ada data tamu yang ditemukan di file tersebut');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal membaca file Excel: ' + err.message);
+    }
+  };
+
+  // Download Sample Excel Template
+  const handleDownloadExcelTemplate = () => {
+    const templateData = [
+      ['Nama Tamu', 'Nomor WhatsApp'],
+      ['Bpk. Ir. Bambang & Istri', '081234567890'],
+      ['Azzur Gifari', '082195767884'],
+      ['Keluarga Besar Bpk. Sutarno', '085340826122'],
+      ['Sahabat Alumni SMA', '']
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(templateData);
+    ws['!cols'] = [{ wch: 35 }, { wch: 20 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Daftar Tamu');
+    XLSX.writeFile(wb, 'template-daftar-tamu-undangan.xlsx');
+    showToast('Template Excel berhasil diunduh!');
+  };
+
+  // Execute Bulk Import
+  const handleExecuteBulkImport = async () => {
+    const listToImport = bulkActiveTab === 'excel' 
+      ? bulkParsedGuests 
+      : parseTextToGuests(bulkPasteText);
+
+    if (listToImport.length === 0) {
+      showToast('Tidak ada data tamu untuk diimpor');
+      return;
+    }
+
+    setIsImportingBulk(true);
+    try {
+      const res = await adminFetch('/api/guests/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guests: listToImport })
+      });
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        json.data.forEach(g => saveCustomGuest(g));
+        setGuests(prev => [...prev, ...json.data]);
+        showToast(`Alhamdulillah! Berhasil menambahkan ${json.data.length} tamu undangan!`);
+        setIsBulkModalOpen(false);
+        setBulkParsedGuests([]);
+        setBulkPasteText('');
+        setBulkFileName('');
+        loadAllData();
+      } else {
+        showToast(json.message || 'Gagal mengimpor daftar tamu');
+      }
+    } catch (err) {
+      showToast(err.message || 'Gagal mengimpor daftar tamu');
+    } finally {
+      setIsImportingBulk(false);
+    }
+  };
+
   const handleAddGuest = async (e) => {
     e.preventDefault();
     if (!guestNameInput.trim()) {
@@ -1233,11 +1381,20 @@ Salam hangat kami,
                       <div className="gen-btn-group">
                         <button type="submit" className="btn-gold save-guest-btn">
                           <Plus size={16} />
-                          <span>Simpan ke Daftar Tamu</span>
+                          <span>Simpan Tamu</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsBulkModalOpen(true)}
+                          className="btn-bulk-import"
+                          title="Upload file Excel atau paste daftar nama tamu secara massal"
+                        >
+                          <FileSpreadsheet size={15} />
+                          <span>Upload Excel / Massal</span>
                         </button>
                         <button type="button" onClick={() => handleSendWa()} className="btn-wa-direct">
                           <Send size={15} />
-                          <span>Kirim ke WhatsApp Langsung</span>
+                          <span>Kirim WA</span>
                         </button>
                       </div>
                     </div>
@@ -1397,21 +1554,32 @@ Salam hangat kami,
                       </div>
                     </div>
 
-                    {/* Search Bar */}
-                    <div className="table-search-box">
-                      <Search size={14} className="search-icon" />
-                      <input
-                        type="text"
-                        placeholder="Cari nama atau nomor HP..."
-                        value={guestSearchQuery}
-                        onChange={(e) => setGuestSearchQuery(e.target.value)}
-                        className="table-search-input"
-                      />
-                      {guestSearchQuery && (
-                        <button onClick={() => setGuestSearchQuery('')} className="clear-search-btn">
-                          <X size={13} />
-                        </button>
-                      )}
+                    {/* Search Bar & Import Action */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsBulkModalOpen(true)}
+                        className="btn-header-bulk"
+                        title="Upload file Excel atau paste daftar nama tamu secara massal"
+                      >
+                        <FileSpreadsheet size={14} />
+                        <span>Upload Excel</span>
+                      </button>
+                      <div className="table-search-box">
+                        <Search size={14} className="search-icon" />
+                        <input
+                          type="text"
+                          placeholder="Cari nama atau nomor HP..."
+                          value={guestSearchQuery}
+                          onChange={(e) => setGuestSearchQuery(e.target.value)}
+                          className="table-search-input"
+                        />
+                        {guestSearchQuery && (
+                          <button onClick={() => setGuestSearchQuery('')} className="clear-search-btn">
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -2466,6 +2634,177 @@ Salam hangat kami,
         )}
 
       </div>
+
+        {/* Modal Dialog Import Tamu Massal (Excel & Paste) */}
+        {isBulkModalOpen && (
+          <div className="guest-edit-overlay" onClick={() => setIsBulkModalOpen(false)}>
+            <div className="bulk-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="guest-edit-header">
+                <div className="guest-edit-title-wrap">
+                  <div className="guest-edit-icon" style={{ background: 'rgba(5, 150, 105, 0.1)', color: '#059669' }}>
+                    <FileSpreadsheet size={20} />
+                  </div>
+                  <div>
+                    <h4 className="guest-edit-title">Import Tamu Massal (Excel)</h4>
+                    <p className="guest-edit-subtitle">Tambah puluhan / ratusan nama tamu sekaligus dalam hitungan detik</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkModalOpen(false)}
+                  className="guest-edit-close"
+                  title="Tutup Modal"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Tabs: Upload Excel vs Paste Teks */}
+              <div className="bulk-tab-header">
+                <button
+                  type="button"
+                  onClick={() => setBulkActiveTab('excel')}
+                  className={`bulk-tab-btn ${bulkActiveTab === 'excel' ? 'active' : ''}`}
+                >
+                  <Upload size={14} />
+                  <span>Upload File Excel (.xlsx / .csv)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkActiveTab('paste')}
+                  className={`bulk-tab-btn ${bulkActiveTab === 'paste' ? 'active' : ''}`}
+                >
+                  <Copy size={14} />
+                  <span>Tempel / Paste dari Excel</span>
+                </button>
+              </div>
+
+              <div className="bulk-modal-body">
+                {bulkActiveTab === 'excel' ? (
+                  <div className="bulk-excel-content">
+                    {/* Dropzone Upload */}
+                    <div 
+                      className="bulk-dropzone"
+                      onClick={() => bulkFileInputRef.current?.click()}
+                    >
+                      <input
+                        type="file"
+                        ref={bulkFileInputRef}
+                        onChange={handleExcelFileUpload}
+                        accept=".xlsx,.xls,.csv"
+                        style={{ display: 'none' }}
+                      />
+                      <div className="dropzone-icon-circle">
+                        <Upload size={24} />
+                      </div>
+                      <div className="dropzone-text">
+                        <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>
+                          {bulkFileName ? bulkFileName : 'Klik untuk Pilih File Excel (.xlsx / .csv)'}
+                        </strong>
+                        <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                          Mendukung file Microsoft Excel (.xlsx, .xls) dan CSV
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Download Template Bar */}
+                    <div className="bulk-template-bar">
+                      <span style={{ fontSize: '0.78rem', color: '#475569' }}>
+                        💡 Belum punya format tabelnya?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleDownloadExcelTemplate}
+                        className="btn-download-template"
+                      >
+                        <Download size={13} />
+                        <span>Download Contoh Format Excel</span>
+                      </button>
+                    </div>
+
+                    {/* Preview Table if file loaded */}
+                    {bulkParsedGuests.length > 0 && (
+                      <div className="bulk-preview-wrap">
+                        <div className="bulk-preview-header">
+                          <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a' }}>
+                            Pratinjau Tamu Terdeteksi ({bulkParsedGuests.length} Orang)
+                          </span>
+                        </div>
+                        <div className="bulk-preview-list">
+                          {bulkParsedGuests.slice(0, 10).map((g, idx) => (
+                            <div key={idx} className="bulk-preview-item">
+                              <span className="preview-idx">{idx + 1}.</span>
+                              <strong className="preview-name">{g.name}</strong>
+                              {g.phone && <span className="preview-phone">({g.phone})</span>}
+                            </div>
+                          ))}
+                          {bulkParsedGuests.length > 10 && (
+                            <div className="bulk-preview-more">
+                              + {bulkParsedGuests.length - 10} tamu lainnya akan ikut ditambahkan
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bulk-paste-content">
+                    <p style={{ fontSize: '0.8rem', color: '#475569', margin: '0 0 0.5rem 0' }}>
+                      📋 <strong>Cara cepat:</strong> Buka Excel Anda, blok kolom <strong>Nama Tamu</strong> dan <strong>Nomor WhatsApp</strong>, tekan <strong>Ctrl + C (Copy)</strong>, lalu tekan <strong>Ctrl + V (Paste)</strong> di bawah:
+                    </p>
+                    <textarea
+                      value={bulkPasteText}
+                      onChange={(e) => setBulkPasteText(e.target.value)}
+                      placeholder={`Contoh jika di-paste dari Excel:\nBpk. Ahmad & Istri\t081234567890\nSahabat Kuliah\t085678901234\nIbu Hj. Aminah\nKeluarga Besar Bpk. Sutarno`}
+                      rows={8}
+                      className="bulk-paste-textarea"
+                    />
+                    {bulkPasteText.trim() && (
+                      <div className="bulk-preview-info">
+                        ✓ Terdeteksi <strong>{parseTextToGuests(bulkPasteText).length} tamu</strong> siap diimpor
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="guest-edit-actions" style={{ padding: '1rem 1.4rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkModalOpen(false)}
+                  className="btn-edit-cancel"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    isImportingBulk || 
+                    (bulkActiveTab === 'excel' ? bulkParsedGuests.length === 0 : parseTextToGuests(bulkPasteText).length === 0)
+                  }
+                  onClick={handleExecuteBulkImport}
+                  className="btn-edit-submit"
+                  style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}
+                >
+                  {isImportingBulk ? (
+                    <>
+                      <RefreshCw size={14} className="spin-slow" />
+                      <span>Mengimpor Data...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} />
+                      <span>
+                        Impor {bulkActiveTab === 'excel' ? bulkParsedGuests.length : parseTextToGuests(bulkPasteText).length} Tamu Sekarang
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal Dialog Edit Data Tamu */}
         {editingGuest && (
@@ -4688,6 +5027,239 @@ Salam hangat kami,
         .btn-edit-submit:disabled {
           opacity: 0.65;
           cursor: wait;
+        }
+
+        /* Bulk Import Modal CSS */
+        .bulk-modal-card {
+          background: #ffffff;
+          border-radius: 20px;
+          width: 100%;
+          max-width: 540px;
+          box-shadow: 0 25px 60px rgba(0, 20, 50, 0.35);
+          overflow: hidden;
+          color: #1e293b;
+          border: 1.5px solid rgba(5, 150, 105, 0.2);
+          animation: adminModalFadeIn 0.25s ease-out;
+        }
+
+        .bulk-tab-header {
+          display: flex;
+          border-bottom: 1px solid #e2e8f0;
+          background: #f8fafc;
+        }
+
+        .bulk-tab-btn {
+          flex: 1;
+          padding: 0.8rem 1rem;
+          border: none;
+          background: transparent;
+          font-size: 0.82rem;
+          font-weight: 600;
+          color: #64748b;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.45rem;
+          transition: all 0.2s ease;
+          border-bottom: 2px solid transparent;
+        }
+
+        .bulk-tab-btn.active {
+          color: #059669;
+          border-bottom-color: #059669;
+          background: #ffffff;
+          font-weight: 700;
+        }
+
+        .bulk-modal-body {
+          padding: 1.4rem;
+        }
+
+        .bulk-dropzone {
+          border: 2px dashed #059669;
+          border-radius: 14px;
+          padding: 1.6rem 1.2rem;
+          text-align: center;
+          background: #f0fdf4;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.65rem;
+        }
+
+        .bulk-dropzone:hover {
+          background: #dcfce7;
+          border-color: #047857;
+          transform: translateY(-1px);
+        }
+
+        .dropzone-icon-circle {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background: rgba(5, 150, 105, 0.15);
+          color: #059669;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .bulk-template-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 0.6rem;
+          padding: 0.75rem 1rem;
+          background: #f1f5f9;
+          border-radius: 10px;
+          margin-top: 1rem;
+        }
+
+        .btn-download-template {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.4rem 0.85rem;
+          background: #ffffff;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 50px;
+          font-size: 0.76rem;
+          font-weight: 700;
+          color: #005FD0;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .btn-download-template:hover {
+          background: #eff6ff;
+          border-color: #005FD0;
+        }
+
+        .bulk-preview-wrap {
+          margin-top: 1rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          overflow: hidden;
+          background: #f8fafc;
+        }
+
+        .bulk-preview-header {
+          padding: 0.65rem 0.9rem;
+          background: #f1f5f9;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .bulk-preview-list {
+          max-height: 140px;
+          overflow-y: auto;
+          padding: 0.5rem 0.9rem;
+        }
+
+        .bulk-preview-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.35rem 0;
+          font-size: 0.82rem;
+          border-bottom: 1px solid #f1f5f9;
+        }
+
+        .preview-idx {
+          color: #64748b;
+          font-size: 0.78rem;
+          font-weight: 600;
+          min-width: 22px;
+        }
+
+        .preview-name {
+          color: #0f172a;
+        }
+
+        .preview-phone {
+          color: #059669;
+          font-size: 0.78rem;
+          font-family: monospace;
+        }
+
+        .bulk-preview-more {
+          font-size: 0.76rem;
+          color: #64748b;
+          font-style: italic;
+          padding: 0.4rem 0;
+          text-align: center;
+        }
+
+        .bulk-paste-textarea {
+          width: 100%;
+          padding: 0.8rem 1rem;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 12px;
+          font-size: 0.86rem;
+          font-family: monospace;
+          color: #0f172a;
+          background: #f8fafc;
+          box-sizing: border-box;
+          outline: none;
+          transition: all 0.2s;
+        }
+
+        .bulk-paste-textarea:focus {
+          border-color: #059669;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+        }
+
+        .bulk-preview-info {
+          margin-top: 0.5rem;
+          font-size: 0.82rem;
+          color: #059669;
+          font-weight: 600;
+        }
+
+        .btn-bulk-import {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          padding: 0.7rem 1.15rem;
+          border-radius: 50px;
+          border: 1.5px solid #059669;
+          background: #ecfdf5;
+          color: #059669;
+          font-size: 0.82rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .btn-bulk-import:hover {
+          background: #059669;
+          color: #ffffff;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+        }
+
+        .btn-header-bulk {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.45rem 0.85rem;
+          border-radius: 8px;
+          border: 1.5px solid #059669;
+          background: #ecfdf5;
+          color: #059669;
+          font-size: 0.78rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .btn-header-bulk:hover {
+          background: #059669;
+          color: #ffffff;
         }
 
       `}</style>

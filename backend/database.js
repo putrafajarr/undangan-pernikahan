@@ -411,6 +411,65 @@ module.exports = {
     return newGuest;
   },
 
+  addGuestsBulk: async (guestList) => {
+    if (!Array.isArray(guestList) || guestList.length === 0) return [];
+    
+    const db = readDb();
+    const newGuests = [];
+    const supabaseRows = [];
+    const now = Date.now();
+
+    for (let i = 0; i < guestList.length; i++) {
+      const g = guestList[i];
+      const rawName = typeof g === 'string' ? g : (g.name || '');
+      const rawPhone = typeof g === 'object' ? (g.phone || '') : '';
+      const cleanName = sanitizeText(rawName, 60);
+      if (!cleanName.trim()) continue;
+      
+      const cleanPhone = String(rawPhone || '').replace(/[^0-9+\s\-()]/g, '').slice(0, 25);
+      const slug = cleanName
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');
+
+      const newGuest = {
+        id: 'g-' + (now + i),
+        name: cleanName,
+        slug: slug || 'tamu',
+        phone: cleanPhone,
+        group: 'Umum',
+        confirmed: false,
+        createdAt: new Date(now + i).toISOString()
+      };
+
+      newGuests.push(newGuest);
+      supabaseRows.push({
+        id: newGuest.id,
+        name: newGuest.name,
+        slug: newGuest.slug,
+        phone: newGuest.phone,
+        group_name: newGuest.group,
+        confirmed: newGuest.confirmed,
+        created_at: newGuest.createdAt
+      });
+    }
+
+    if (newGuests.length > 0) {
+      db.guests = [...(db.guests || []), ...newGuests];
+      writeDb(db);
+
+      if (supabaseRows.length > 0) {
+        await supabaseFetch('wedding_guests', {
+          method: 'POST',
+          body: JSON.stringify(supabaseRows)
+        });
+      }
+    }
+
+    return newGuests;
+  },
+
   updateGuest: async (id, guest) => {
     const db = readDb();
     const existingIndex = (db.guests || []).findIndex(g => String(g.id) === String(id));
