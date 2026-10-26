@@ -89,29 +89,6 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
     }
   });
 
-  const toggleGuestSent = (id) => {
-    setSentGuestIds((prev) => {
-      const idStr = String(id);
-      const next = prev.includes(idStr)
-        ? prev.filter((x) => x !== idStr)
-        : [...prev, idStr];
-      localStorage.setItem('wedding_sent_guests', JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const markGuestAsSent = (id) => {
-    setSentGuestIds((prev) => {
-      const idStr = String(id);
-      if (!prev.includes(idStr)) {
-        const next = [...prev, idStr];
-        localStorage.setItem('wedding_sent_guests', JSON.stringify(next));
-        return next;
-      }
-      return prev;
-    });
-  };
-
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return Boolean(getAdminToken() && localStorage.getItem('wedding_admin_auth') === 'true');
   });
@@ -136,6 +113,50 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
       throw new Error('Sesi login telah berakhir');
     }
     return res;
+  };
+
+  const toggleGuestSent = async (id) => {
+    const idStr = String(id);
+    const nextIsSent = !sentGuestIds.includes(idStr);
+
+    setSentGuestIds((prev) => {
+      const next = nextIsSent
+        ? [...prev, idStr]
+        : prev.filter((x) => x !== idStr);
+      localStorage.setItem('wedding_sent_guests', JSON.stringify(next));
+      return next;
+    });
+
+    try {
+      await adminFetch(`/api/guests/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isSent: nextIsSent })
+      });
+    } catch (e) {
+      console.warn('Gagal sinkron status kirim ke server:', e);
+    }
+  };
+
+  const markGuestAsSent = async (id) => {
+    const idStr = String(id);
+    if (!sentGuestIds.includes(idStr)) {
+      setSentGuestIds((prev) => {
+        const next = [...prev, idStr];
+        localStorage.setItem('wedding_sent_guests', JSON.stringify(next));
+        return next;
+      });
+
+      try {
+        await adminFetch(`/api/guests/${id}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isSent: true })
+        });
+      } catch (e) {
+        console.warn('Gagal sinkron status kirim ke server:', e);
+      }
+    }
   };
 
   const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'generator' | 'wishes' | 'settings'
@@ -496,6 +517,38 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
         setGuests(serverGuests);
         // Selaraskan cache lokal agar tidak menyimpan tamu yang telah dihapus di Supabase
         localStorage.setItem('wedding_custom_guests', JSON.stringify(serverGuests));
+
+        // Ambil status tamu terkirim langsung dari database cloud (Supabase)
+        const serverSentIds = serverGuests
+          .filter((g) => Boolean(g.isSent || g.confirmed))
+          .map((g) => String(g.id));
+
+        const localSentIds = (() => {
+          try {
+            return JSON.parse(localStorage.getItem('wedding_sent_guests') || '[]');
+          } catch {
+            return [];
+          }
+        })();
+
+        // Sinkronisasi status terkirim: gabungkan agar tidak hilang
+        const mergedSentIds = Array.from(new Set([...serverSentIds, ...localSentIds]));
+        setSentGuestIds(mergedSentIds);
+        localStorage.setItem('wedding_sent_guests', JSON.stringify(mergedSentIds));
+
+        // Jika browser lokal (misalnya Firefox) memiliki data terkirim yang belum ada di server,
+        // otomatis kirimkan pembaruan massal ke Supabase agar browser lain (Chrome/Edge/HP) langsung mendapatkan status yang sama
+        const unsyncedToCloud = localSentIds.filter(
+          (id) => !serverSentIds.includes(String(id)) && serverGuests.some((g) => String(g.id) === String(id))
+        );
+        if (unsyncedToCloud.length > 0) {
+          adminFetch('/api/guests/bulk-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: unsyncedToCloud, isSent: true })
+          }).catch(() => {});
+        }
+
         // Bersihkan tracking id deleted yang sudah tidak ada di server
         const curDeletedGuests = getDeletedGuestIds();
         const activeDeletedGuests = curDeletedGuests.filter((id) =>
@@ -1105,20 +1158,37 @@ Salam hangat kami,
     }
   };
 
-  const handleMarkSelectedSent = (isSent) => {
+  const handleMarkSelectedSent = async (isSent) => {
     if (selectedGuestIds.length === 0) return;
+    const targetIds = [...selectedGuestIds];
+
     setSentGuestIds((prev) => {
       let next;
       if (isSent) {
-        const set = new Set([...prev, ...selectedGuestIds]);
+        const set = new Set([...prev, ...targetIds]);
         next = Array.from(set);
       } else {
-        next = prev.filter((id) => !selectedGuestIds.includes(id));
+        next = prev.filter((id) => !targetIds.includes(String(id)));
       }
       localStorage.setItem('wedding_sent_guests', JSON.stringify(next));
       return next;
     });
-    showToast(`Status WhatsApp ${selectedGuestIds.length} tamu berhasil diperbarui!`);
+
+    showToast(
+      isSent
+        ? `${targetIds.length} tamu ditandai sebagai Terkirim!`
+        : `${targetIds.length} tamu ditandai sebagai Belum Kirim.`
+    );
+
+    try {
+      await adminFetch('/api/guests/bulk-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: targetIds, isSent })
+      });
+    } catch (e) {
+      console.warn('Gagal sinkron status kirim massal ke server:', e);
+    }
   };
 
   const handleDeleteWish = async (id) => {

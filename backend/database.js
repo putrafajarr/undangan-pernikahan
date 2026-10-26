@@ -358,7 +358,8 @@ module.exports = {
         slug: g.slug,
         phone: g.phone,
         group: g.group_name,
-        confirmed: g.confirmed,
+        confirmed: Boolean(g.confirmed),
+        isSent: Boolean(g.confirmed),
         createdAt: g.created_at
       }));
       const db = readDb();
@@ -368,6 +369,47 @@ module.exports = {
     }
     const db = readDb();
     return db.guests || [];
+  },
+
+  updateGuestStatus: async (id, isSent) => {
+    const isSentBool = Boolean(isSent);
+    const db = readDb();
+    const existingIndex = (db.guests || []).findIndex(g => String(g.id) === String(id));
+    if (existingIndex !== -1) {
+      db.guests[existingIndex].confirmed = isSentBool;
+      db.guests[existingIndex].isSent = isSentBool;
+      writeDb(db);
+    }
+
+    await supabaseFetch(`wedding_guests?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ confirmed: isSentBool })
+    });
+
+    return { id, isSent: isSentBool, confirmed: isSentBool };
+  },
+
+  updateGuestsBulkStatus: async (ids, isSent) => {
+    if (!Array.isArray(ids) || ids.length === 0) return { count: 0, isSent: Boolean(isSent) };
+    const isSentBool = Boolean(isSent);
+    const strIds = ids.map(id => String(id));
+    const db = readDb();
+    for (const id of strIds) {
+      const idx = (db.guests || []).findIndex(g => String(g.id) === id);
+      if (idx !== -1) {
+        db.guests[idx].confirmed = isSentBool;
+        db.guests[idx].isSent = isSentBool;
+      }
+    }
+    writeDb(db);
+
+    const idFilter = strIds.map(id => encodeURIComponent(id)).join(',');
+    await supabaseFetch(`wedding_guests?id=in.(${idFilter})`, {
+      method: 'PATCH',
+      body: JSON.stringify({ confirmed: isSentBool })
+    });
+
+    return { count: strIds.length, isSent: isSentBool };
   },
 
   addGuest: async (guest) => {

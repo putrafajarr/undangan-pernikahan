@@ -562,6 +562,31 @@ app.put('/api/guests/:id', requireAdminAuth, async (req, res) => {
   }
 });
 
+// 10b. Update Guest Sent / WA Status (Dilindungi: Wajib Admin)
+app.put('/api/guests/:id/status', requireAdminAuth, async (req, res) => {
+  try {
+    const { isSent } = req.body;
+    const result = await db.updateGuestStatus(req.params.id, isSent);
+    res.json({ success: true, data: result, message: 'Status kirim tamu berhasil diperbarui' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 10c. Bulk Update Guests Sent / WA Status (Dilindungi: Wajib Admin)
+app.post('/api/guests/bulk-status', requireAdminAuth, async (req, res) => {
+  try {
+    const { ids, isSent } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Daftar ID tamu tidak valid' });
+    }
+    const result = await db.updateGuestsBulkStatus(ids, isSent);
+    res.json({ success: true, data: result, message: `Status kirim ${ids.length} tamu berhasil diperbarui` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 11. Delete Guest (Dilindungi: Wajib Admin)
 app.delete('/api/guests/:id', requireAdminAuth, async (req, res) => {
   try {
