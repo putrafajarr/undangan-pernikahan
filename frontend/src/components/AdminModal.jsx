@@ -160,7 +160,7 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
 
   // Edit Guest Modal State
   const [editingGuest, setEditingGuest] = useState(null);
-  const [editGuestForm, setEditGuestForm] = useState({ name: '', phone: '', group: 'Umum' });
+  const [editGuestForm, setEditGuestForm] = useState({ name: '', phone: '' });
   const [isUpdatingGuest, setIsUpdatingGuest] = useState(false);
 
   // Settings form state
@@ -670,8 +670,7 @@ Salam hangat kami,
     setEditingGuest(g);
     setEditGuestForm({
       name: g.name || '',
-      phone: g.phone || '',
-      group: g.group || 'Umum'
+      phone: g.phone || ''
     });
   };
 
@@ -690,8 +689,7 @@ Salam hangat kami,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: editGuestForm.name.trim(),
-          phone: editGuestForm.phone.trim(),
-          group: editGuestForm.group
+          phone: editGuestForm.phone.trim()
         })
       });
       const json = await res.json();
@@ -2511,7 +2509,7 @@ Salam hangat kami,
                 </div>
 
                 <div className="guest-edit-field">
-                  <label className="guest-edit-label">Nomor WhatsApp</label>
+                  <label className="guest-edit-label">Nomor WhatsApp (Opsional)</label>
                   <input
                     type="text"
                     value={editGuestForm.phone}
@@ -2520,21 +2518,6 @@ Salam hangat kami,
                     placeholder="Contoh: 081234567890"
                   />
                   <span className="guest-edit-hint">Nomor tujuan untuk tombol Kirim WA</span>
-                </div>
-
-                <div className="guest-edit-field">
-                  <label className="guest-edit-label">Kategori / Grup Tamu</label>
-                  <select
-                    value={editGuestForm.group}
-                    onChange={(e) => setEditGuestForm({ ...editGuestForm, group: e.target.value })}
-                    className="admin-select"
-                  >
-                    <option value="Umum">Umum</option>
-                    <option value="Keluarga">Keluarga</option>
-                    <option value="Sahabat">Sahabat</option>
-                    <option value="Rekan Kerja">Rekan Kerja</option>
-                    <option value="VIP">VIP</option>
-                  </select>
                 </div>
 
                 <div className="guest-edit-actions">
