@@ -158,6 +158,11 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
   const [isTemplateDirty, setIsTemplateDirty] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
 
+  // Edit Guest Modal State
+  const [editingGuest, setEditingGuest] = useState(null);
+  const [editGuestForm, setEditGuestForm] = useState({ name: '', phone: '', group: 'Umum' });
+  const [isUpdatingGuest, setIsUpdatingGuest] = useState(false);
+
   // Settings form state
   const [settingsForm, setSettingsForm] = useState({
     quoteArabic: '',
@@ -651,10 +656,67 @@ Salam hangat kami,
 
     const textToSend = compileWaMessage(waTemplate, targetName);
 
+    // Langsung buka ke web.whatsapp.com di desktop jika ada nomor HP
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+
     const url = phone
-      ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(textToSend)}`
-      : `https://api.whatsapp.com/send?text=${encodeURIComponent(textToSend)}`;
+      ? `${baseUrl}?phone=${phone}&text=${encodeURIComponent(textToSend)}`
+      : `${baseUrl}?text=${encodeURIComponent(textToSend)}`;
     window.open(url, '_blank');
+  };
+
+  const startEditGuest = (g) => {
+    setEditingGuest(g);
+    setEditGuestForm({
+      name: g.name || '',
+      phone: g.phone || '',
+      group: g.group || 'Umum'
+    });
+  };
+
+  const handleUpdateGuest = async (e) => {
+    e.preventDefault();
+    if (!editingGuest) return;
+    if (!editGuestForm.name.trim()) {
+      showToast('Nama tamu tidak boleh kosong');
+      return;
+    }
+
+    setIsUpdatingGuest(true);
+    try {
+      const res = await adminFetch(`/api/guests/${editingGuest.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editGuestForm.name.trim(),
+          phone: editGuestForm.phone.trim(),
+          group: editGuestForm.group
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setGuests((prev) =>
+          prev.map((g) => (String(g.id) === String(editingGuest.id) ? json.data : g))
+        );
+
+        const customGuests = getCustomGuests();
+        const updatedCustom = customGuests.map((g) =>
+          String(g.id) === String(editingGuest.id) ? json.data : g
+        );
+        localStorage.setItem('wedding_custom_guests', JSON.stringify(updatedCustom));
+
+        showToast(`Data tamu "${json.data.name}" berhasil diperbarui!`);
+        setEditingGuest(null);
+        loadAllData();
+      } else {
+        showToast(json.message || 'Gagal memperbarui data tamu');
+      }
+    } catch (err) {
+      showToast(err.message || 'Gagal memperbarui data tamu');
+    } finally {
+      setIsUpdatingGuest(false);
+    }
   };
 
   const handleAddGuest = async (e) => {
@@ -1435,6 +1497,13 @@ Salam hangat kami,
                                     title="Salin Pesan Undangan Lengkap"
                                   >
                                     <Copy size={13} />
+                                  </button>
+                                  <button
+                                    onClick={() => startEditGuest(g)}
+                                    className="btn-action-icon"
+                                    title="Edit Data Tamu"
+                                  >
+                                    <Edit3 size={13} />
                                   </button>
                                   <button
                                     onClick={() => handleDeleteGuest(g.id)}
@@ -2399,6 +2468,107 @@ Salam hangat kami,
         )}
 
       </div>
+
+        {/* Modal Dialog Edit Data Tamu */}
+        {editingGuest && (
+          <div className="guest-edit-overlay" onClick={() => setEditingGuest(null)}>
+            <div className="guest-edit-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="guest-edit-header">
+                <div className="guest-edit-title-wrap">
+                  <div className="guest-edit-icon">
+                    <Edit3 size={18} />
+                  </div>
+                  <div>
+                    <h4 className="guest-edit-title font-serif">Edit Data Tamu</h4>
+                    <p className="guest-edit-subtitle">Perbarui data tamu di Supabase & Database</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingGuest(null)}
+                  className="guest-edit-close"
+                  title="Tutup"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateGuest} className="guest-edit-form">
+                <div className="guest-edit-field">
+                  <label className="guest-edit-label">Nama Tamu / Grup</label>
+                  <input
+                    type="text"
+                    value={editGuestForm.name}
+                    onChange={(e) => setEditGuestForm({ ...editGuestForm, name: e.target.value })}
+                    className="admin-input"
+                    placeholder="Contoh: Bpk. Ahmad & Istri"
+                    required
+                    autoFocus
+                  />
+                  <span className="guest-edit-hint">
+                    Parameter tautan: ?to={encodeURIComponent(editGuestForm.name.trim() || 'nama')}
+                  </span>
+                </div>
+
+                <div className="guest-edit-field">
+                  <label className="guest-edit-label">Nomor WhatsApp</label>
+                  <input
+                    type="text"
+                    value={editGuestForm.phone}
+                    onChange={(e) => setEditGuestForm({ ...editGuestForm, phone: e.target.value })}
+                    className="admin-input"
+                    placeholder="Contoh: 081234567890"
+                  />
+                  <span className="guest-edit-hint">Nomor tujuan untuk tombol Kirim WA</span>
+                </div>
+
+                <div className="guest-edit-field">
+                  <label className="guest-edit-label">Kategori / Grup Tamu</label>
+                  <select
+                    value={editGuestForm.group}
+                    onChange={(e) => setEditGuestForm({ ...editGuestForm, group: e.target.value })}
+                    className="admin-select"
+                  >
+                    <option value="Umum">Umum</option>
+                    <option value="Keluarga">Keluarga</option>
+                    <option value="Sahabat">Sahabat</option>
+                    <option value="Rekan Kerja">Rekan Kerja</option>
+                    <option value="VIP">VIP</option>
+                  </select>
+                </div>
+
+                <div className="guest-edit-actions">
+                  <button
+                    type="button"
+                    onClick={() => setEditingGuest(null)}
+                    className="btn-secondary"
+                    style={{ padding: '0.65rem 1.2rem', borderRadius: '50px' }}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdatingGuest}
+                    className="btn-gold"
+                    style={{ padding: '0.65rem 1.4rem', borderRadius: '50px', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    {isUpdatingGuest ? (
+                      <>
+                        <RefreshCw size={14} className="spin-slow" />
+                        <span>Menyimpan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={14} />
+                        <span>Simpan Perubahan</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       <style>{`
         /* ========================================================
@@ -4324,6 +4494,123 @@ Salam hangat kami,
             align-items: flex-start;
             gap: 0.6rem;
           }
+        }
+
+        /* Modal Edit Tamu Popup */
+        .guest-edit-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 20, 50, 0.72);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          z-index: 10050;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+        }
+
+        .guest-edit-modal {
+          background: #ffffff;
+          border-radius: 20px;
+          width: 100%;
+          max-width: 480px;
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+          overflow: hidden;
+          color: #1e293b;
+          border: 1.5px solid rgba(0, 95, 208, 0.2);
+        }
+
+        .guest-edit-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1.2rem 1.5rem;
+          border-bottom: 1px solid #e2e8f0;
+          background: #f8fafc;
+        }
+
+        .guest-edit-title-wrap {
+          display: flex;
+          align-items: center;
+          gap: 0.8rem;
+        }
+
+        .guest-edit-icon {
+          width: 38px;
+          height: 38px;
+          border-radius: 10px;
+          background: rgba(0, 95, 208, 0.12);
+          color: #005FD0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .guest-edit-title {
+          font-size: 1.15rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0;
+        }
+
+        .guest-edit-subtitle {
+          font-size: 0.76rem;
+          color: #64748b;
+          margin: 0.15rem 0 0 0;
+        }
+
+        .guest-edit-close {
+          background: transparent;
+          border: none;
+          color: #64748b;
+          cursor: pointer;
+          padding: 0.35rem;
+          border-radius: 8px;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .guest-edit-close:hover {
+          background: #e2e8f0;
+          color: #0f172a;
+        }
+
+        .guest-edit-form {
+          padding: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.15rem;
+        }
+
+        .guest-edit-field {
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
+        }
+
+        .guest-edit-label {
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: #334155;
+        }
+
+        .guest-edit-hint {
+          font-size: 0.72rem;
+          color: #64748b;
+          font-family: monospace;
+        }
+
+        .guest-edit-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 0.75rem;
+          margin-top: 0.5rem;
+          padding-top: 1.1rem;
+          border-top: 1px solid #f1f5f9;
         }
 
       `}</style>

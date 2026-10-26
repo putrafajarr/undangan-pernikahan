@@ -411,6 +411,50 @@ module.exports = {
     return newGuest;
   },
 
+  updateGuest: async (id, guest) => {
+    const db = readDb();
+    const existingIndex = (db.guests || []).findIndex(g => String(g.id) === String(id));
+    if (existingIndex === -1) {
+      return null;
+    }
+
+    const current = db.guests[existingIndex];
+    const cleanName = guest.name ? sanitizeText(guest.name, 60) : current.name;
+    const cleanPhone = guest.phone !== undefined ? (guest.phone || '').replace(/[^0-9+\s\-()]/g, '').slice(0, 25) : current.phone;
+    const cleanGroup = guest.group ? sanitizeText(guest.group, 40) : (current.group || 'Umum');
+
+    const slug = cleanName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+
+    const updatedGuest = {
+      ...current,
+      name: cleanName,
+      slug: slug || 'tamu',
+      phone: cleanPhone,
+      group: cleanGroup,
+      updatedAt: new Date().toISOString()
+    };
+
+    db.guests[existingIndex] = updatedGuest;
+    writeDb(db);
+
+    // Sync to Supabase
+    await supabaseFetch(`wedding_guests?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        name: updatedGuest.name,
+        slug: updatedGuest.slug,
+        phone: updatedGuest.phone,
+        group_name: updatedGuest.group
+      })
+    });
+
+    return updatedGuest;
+  },
+
   deleteGuest: async (id) => {
     const db = readDb();
     const guestToDelete = (db.guests || []).find(g => String(g.id) === String(id));

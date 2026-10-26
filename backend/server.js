@@ -526,7 +526,24 @@ app.post('/api/guests', requireAdminAuth, async (req, res) => {
   }
 });
 
-// 10. Delete Guest (Dilindungi: Wajib Admin)
+// 10. Update Guest (Dilindungi: Wajib Admin)
+app.put('/api/guests/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { name, phone, group } = req.body;
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ success: false, message: 'Nama tamu wajib diisi' });
+    }
+    const updated = await db.updateGuest(req.params.id, { name, phone, group });
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Data tamu tidak ditemukan' });
+    }
+    res.json({ success: true, data: updated, message: 'Data tamu berhasil diperbarui' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 11. Delete Guest (Dilindungi: Wajib Admin)
 app.delete('/api/guests/:id', requireAdminAuth, async (req, res) => {
   try {
     const success = await db.deleteGuest(req.params.id);
