@@ -2477,15 +2477,15 @@ Salam hangat kami,
                     <Edit3 size={18} />
                   </div>
                   <div>
-                    <h4 className="guest-edit-title font-serif">Edit Data Tamu</h4>
-                    <p className="guest-edit-subtitle">Perbarui data tamu di Supabase & Database</p>
+                    <h4 className="guest-edit-title">Edit Data Tamu</h4>
+                    <p className="guest-edit-subtitle">Perbarui nama & nomor WhatsApp tamu</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEditingGuest(null)}
                   className="guest-edit-close"
-                  title="Tutup"
+                  title="Tutup Modal"
                 >
                   <X size={18} />
                 </button>
@@ -2493,19 +2493,22 @@ Salam hangat kami,
 
               <form onSubmit={handleUpdateGuest} className="guest-edit-form">
                 <div className="guest-edit-field">
-                  <label className="guest-edit-label">Nama Tamu / Grup</label>
+                  <label className="guest-edit-label">Nama Tamu Undangan *</label>
                   <input
                     type="text"
                     value={editGuestForm.name}
                     onChange={(e) => setEditGuestForm({ ...editGuestForm, name: e.target.value })}
-                    className="admin-input"
+                    className="guest-edit-input"
                     placeholder="Contoh: Bpk. Ahmad & Istri"
                     required
                     autoFocus
                   />
-                  <span className="guest-edit-hint">
-                    Parameter tautan: ?to={encodeURIComponent(editGuestForm.name.trim() || 'nama')}
-                  </span>
+                  <div className="guest-edit-link-badge">
+                    <span className="link-badge-tag">Tautan Personal:</span>
+                    <span className="link-badge-url">
+                      ?to={encodeURIComponent(editGuestForm.name.trim() || 'nama')}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="guest-edit-field">
@@ -2514,26 +2517,24 @@ Salam hangat kami,
                     type="text"
                     value={editGuestForm.phone}
                     onChange={(e) => setEditGuestForm({ ...editGuestForm, phone: e.target.value })}
-                    className="admin-input"
+                    className="guest-edit-input"
                     placeholder="Contoh: 081234567890"
                   />
-                  <span className="guest-edit-hint">Nomor tujuan untuk tombol Kirim WA</span>
+                  <span className="guest-edit-hint">Digunakan untuk kirim langsung ke WhatsApp</span>
                 </div>
 
                 <div className="guest-edit-actions">
                   <button
                     type="button"
                     onClick={() => setEditingGuest(null)}
-                    className="btn-secondary"
-                    style={{ padding: '0.65rem 1.2rem', borderRadius: '50px' }}
+                    className="btn-edit-cancel"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={isUpdatingGuest}
-                    className="btn-gold"
-                    style={{ padding: '0.65rem 1.4rem', borderRadius: '50px', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                    className="btn-edit-submit"
                   >
                     {isUpdatingGuest ? (
                       <>
@@ -4497,18 +4498,19 @@ Salam hangat kami,
           background: #ffffff;
           border-radius: 20px;
           width: 100%;
-          max-width: 480px;
-          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+          max-width: 440px;
+          box-shadow: 0 25px 60px rgba(0, 20, 50, 0.35);
           overflow: hidden;
           color: #1e293b;
-          border: 1.5px solid rgba(0, 95, 208, 0.2);
+          border: 1.5px solid rgba(0, 95, 208, 0.15);
+          animation: adminModalFadeIn 0.25s ease-out;
         }
 
         .guest-edit-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 1.2rem 1.5rem;
+          padding: 1.15rem 1.4rem;
           border-bottom: 1px solid #e2e8f0;
           background: #f8fafc;
         }
@@ -4516,29 +4518,32 @@ Salam hangat kami,
         .guest-edit-title-wrap {
           display: flex;
           align-items: center;
-          gap: 0.8rem;
+          gap: 0.75rem;
         }
 
         .guest-edit-icon {
-          width: 38px;
-          height: 38px;
+          width: 36px;
+          height: 36px;
           border-radius: 10px;
-          background: rgba(0, 95, 208, 0.12);
+          background: rgba(0, 95, 208, 0.1);
           color: #005FD0;
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-shrink: 0;
         }
 
         .guest-edit-title {
-          font-size: 1.15rem;
+          font-family: inherit !important;
+          font-size: 1.05rem;
           font-weight: 700;
           color: #0f172a;
           margin: 0;
+          letter-spacing: -0.01em;
         }
 
         .guest-edit-subtitle {
-          font-size: 0.76rem;
+          font-size: 0.74rem;
           color: #64748b;
           margin: 0.15rem 0 0 0;
         }
@@ -4562,7 +4567,7 @@ Salam hangat kami,
         }
 
         .guest-edit-form {
-          padding: 1.5rem;
+          padding: 1.4rem;
           display: flex;
           flex-direction: column;
           gap: 1.15rem;
@@ -4571,19 +4576,64 @@ Salam hangat kami,
         .guest-edit-field {
           display: flex;
           flex-direction: column;
-          gap: 0.4rem;
+          gap: 0.45rem;
         }
 
         .guest-edit-label {
           font-size: 0.82rem;
           font-weight: 700;
-          color: #334155;
+          color: #1e293b;
+        }
+
+        .guest-edit-input {
+          width: 100%;
+          padding: 0.72rem 0.95rem;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 12px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #0f172a;
+          background: #f8fafc;
+          transition: all 0.2s ease;
+          outline: none;
+          box-sizing: border-box;
+        }
+
+        .guest-edit-input:focus {
+          border-color: #005FD0;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(0, 95, 208, 0.14);
+        }
+
+        .guest-edit-link-badge {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.35rem 0.65rem;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.74rem;
+          margin-top: 0.15rem;
+        }
+
+        .link-badge-tag {
+          font-weight: 600;
+          color: #64748b;
+        }
+
+        .link-badge-url {
+          color: #005FD0;
+          font-weight: 700;
+          font-family: monospace;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .guest-edit-hint {
           font-size: 0.72rem;
           color: #64748b;
-          font-family: monospace;
         }
 
         .guest-edit-actions {
@@ -4591,9 +4641,53 @@ Salam hangat kami,
           align-items: center;
           justify-content: flex-end;
           gap: 0.75rem;
-          margin-top: 0.5rem;
-          padding-top: 1.1rem;
+          margin-top: 0.3rem;
+          padding-top: 1rem;
           border-top: 1px solid #f1f5f9;
+        }
+
+        .btn-edit-cancel {
+          padding: 0.62rem 1.25rem;
+          border-radius: 50px;
+          border: 1.5px solid #cbd5e1;
+          background: #ffffff;
+          color: #475569;
+          font-size: 0.82rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .btn-edit-cancel:hover {
+          background: #f1f5f9;
+          border-color: #94a3b8;
+          color: #1e293b;
+        }
+
+        .btn-edit-submit {
+          padding: 0.62rem 1.45rem;
+          border-radius: 50px;
+          border: none;
+          background: linear-gradient(135deg, #005FD0 0%, #004fb0 100%);
+          color: #ffffff;
+          font-size: 0.82rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          box-shadow: 0 4px 14px rgba(0, 95, 208, 0.3);
+          transition: all 0.2s ease;
+        }
+
+        .btn-edit-submit:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 18px rgba(0, 95, 208, 0.4);
+        }
+
+        .btn-edit-submit:disabled {
+          opacity: 0.65;
+          cursor: wait;
         }
 
       `}</style>
