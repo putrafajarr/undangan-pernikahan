@@ -827,8 +827,69 @@ Salam hangat kami,
     showToast('Template Excel berhasil diunduh!');
   };
 
+  // Export RSVP and Catering Report directly to Excel (.xlsx)
+  const handleExportRsvpReport = async () => {
+    try {
+      let currentWishes = wishes;
+      try {
+        const res = await adminFetch('/api/wishes');
+        if (res.ok) {
+          const fresh = await res.json();
+          if (Array.isArray(fresh) && fresh.length > 0) currentWishes = fresh;
+        }
+      } catch (_) {}
+
+      if (!currentWishes || currentWishes.length === 0) {
+        showToast('Belum ada data ucapan atau RSVP tamu untuk diekspor');
+        return;
+      }
+
+      const exportRows = [
+        ['No', 'Nama Tamu Undangan', 'Konfirmasi Kehadiran', 'Jumlah Porsi (Orang)', 'Pesan Doa & Ucapan', 'Waktu Kirim']
+      ];
+
+      currentWishes.forEach((w, idx) => {
+        let attendanceLabel = 'Hadir';
+        if (w.attendance === 'tidak_hadir') attendanceLabel = 'Tidak Hadir';
+        else if (w.attendance === 'ragu') attendanceLabel = 'Masih Ragu';
+
+        const dateStr = w.createdAt 
+          ? new Date(w.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+          : '-';
+
+        exportRows.push([
+          idx + 1,
+          w.name || 'Tamu Undangan',
+          attendanceLabel,
+          w.guestsCount || 1,
+          w.message || '',
+          dateStr
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(exportRows);
+      ws['!cols'] = [
+        { wch: 6 },
+        { wch: 30 },
+        { wch: 22 },
+        { wch: 22 },
+        { wch: 45 },
+        { wch: 24 }
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Laporan RSVP & Katering');
+      XLSX.writeFile(wb, 'data-rsvp-pernikahan-fajar-rosa.xlsx');
+      showToast('Laporan RSVP & Katering berhasil diunduh dalam format Excel (.xlsx)!');
+    } catch (err) {
+      console.error('Export error:', err);
+      const fallbackUrl = getApiUrl(`/api/export/csv?token=${encodeURIComponent(getAdminToken())}`);
+      window.open(fallbackUrl, '_blank');
+    }
+  };
+
   // Execute Bulk Import
   const handleExecuteBulkImport = async () => {
+
     const listToImport = bulkActiveTab === 'excel' 
       ? bulkParsedGuests 
       : parseTextToGuests(bulkPasteText);
@@ -1319,14 +1380,16 @@ Salam hangat kami,
                       </p>
                     </div>
                   </div>
-                  <a
-                    href={getApiUrl('/api/export/csv')}
-                    download="data-rsvp-pernikahan-fajar-rosa.csv"
+                  <button
+                    type="button"
+                    onClick={handleExportRsvpReport}
                     className="btn-gold export-action-btn"
+                    title="Unduh rekapitulasi data kehadiran dan katering ke file Excel (.xlsx)"
                   >
                     <Download size={16} />
-                    <span>Download Excel (CSV)</span>
-                  </a>
+                    <span>Download Excel (.xlsx)</span>
+                  </button>
+
                 </div>
 
               </div>
@@ -1707,14 +1770,16 @@ Salam hangat kami,
                       </div>
                     </div>
 
-                    <a 
-                      href={getApiUrl(`/api/export/csv?token=${encodeURIComponent(getAdminToken())}`)} 
-                      download="data-buku-tamu.csv" 
+                    <button
+                      type="button"
+                      onClick={handleExportRsvpReport}
                       className="btn-outline-gold btn-sm"
+                      title="Unduh data buku ucapan dan konfirmasi kehadiran ke file Excel (.xlsx)"
                     >
                       <Download size={13} />
-                      <span>Download CSV</span>
-                    </a>
+                      <span>Download Excel (.xlsx)</span>
+                    </button>
+
                   </div>
 
                   {/* Filter Toolbar */}
