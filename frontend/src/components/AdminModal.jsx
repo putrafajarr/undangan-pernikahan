@@ -5,7 +5,8 @@ import {
   Unlock, Plus, Phone, ExternalLink, RefreshCw, ShieldCheck,
   MapPin, Navigation, CreditCard, Search, Copy, Check, 
   Calendar, Clock, Music, Save, UserCheck, Heart, AlertCircle,
-  Edit3, RotateCcw, Quote, Upload, Play, Pause, Volume2, FileSpreadsheet
+  Edit3, RotateCcw, Quote, Upload, Play, Pause, Volume2, FileSpreadsheet,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { getApiUrl } from '../config/api';
@@ -146,6 +147,13 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
 
   // Search & Filter state
   const [guestSearchQuery, setGuestSearchQuery] = useState('');
+  const [guestCurrentPage, setGuestCurrentPage] = useState(1);
+  const GUESTS_PER_PAGE = 50;
+
+  useEffect(() => {
+    setGuestCurrentPage(1);
+  }, [guestSearchQuery]);
+
   const [wishSearchQuery, setWishSearchQuery] = useState('');
   const [wishFilterAttendance, setWishFilterAttendance] = useState('all');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -1016,18 +1024,24 @@ Salam hangat kami,
   };
 
   const handleSelectAllGuests = () => {
-    if (filteredGuests.length === 0) return;
-    const allFilteredIds = filteredGuests.map((g) => String(g.id));
-    const isAllSelected = allFilteredIds.every((id) => selectedGuestIds.includes(id));
+    const targetList = paginatedGuests && paginatedGuests.length > 0 ? paginatedGuests : filteredGuests;
+    if (targetList.length === 0) return;
+    const pageIds = targetList.map((g) => String(g.id));
+    const isAllPageSelected = pageIds.every((id) => selectedGuestIds.includes(id));
 
-    if (isAllSelected) {
-      setSelectedGuestIds((prev) => prev.filter((id) => !allFilteredIds.includes(id)));
+    if (isAllPageSelected) {
+      setSelectedGuestIds((prev) => prev.filter((id) => !pageIds.includes(id)));
     } else {
       setSelectedGuestIds((prev) => {
-        const set = new Set([...prev, ...allFilteredIds]);
+        const set = new Set([...prev, ...pageIds]);
         return Array.from(set);
       });
     }
+  };
+
+  const handleSelectAllFilteredGuests = () => {
+    const allIds = filteredGuests.map((g) => String(g.id));
+    setSelectedGuestIds(allIds);
   };
 
   const handleClearSelection = () => {
@@ -1218,6 +1232,12 @@ Salam hangat kami,
       (g.phone && g.phone.includes(q))
     );
   });
+
+  // Pagination data tamu: 50 per halaman
+  const totalGuestPages = Math.ceil(filteredGuests.length / GUESTS_PER_PAGE) || 1;
+  const validGuestPage = Math.min(Math.max(guestCurrentPage, 1), totalGuestPages);
+  const startGuestIdx = (validGuestPage - 1) * GUESTS_PER_PAGE;
+  const paginatedGuests = filteredGuests.slice(startGuestIdx, startGuestIdx + GUESTS_PER_PAGE);
 
   const filteredWishes = wishes.filter((w) => {
     if (wishFilterAttendance !== 'all' && w.attendance !== wishFilterAttendance) {
@@ -1732,17 +1752,8 @@ Salam hangat kami,
                       </div>
                     </div>
 
-                    {/* Search Bar & Import Action */}
+                    {/* Search Bar */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => setIsBulkModalOpen(true)}
-                        className="btn-header-bulk"
-                        title="Upload file Excel atau paste daftar nama tamu secara massal"
-                      >
-                        <FileSpreadsheet size={14} />
-                        <span>Upload Excel</span>
-                      </button>
                       <div className="table-search-box">
                         <Search size={14} className="search-icon" />
                         <input
@@ -1769,6 +1780,16 @@ Salam hangat kami,
                           <CheckCircle size={14} />
                           <span>{selectedGuestIds.length} tamu dipilih</span>
                         </span>
+                        {filteredGuests.length > paginatedGuests.length && selectedGuestIds.length < filteredGuests.length && (
+                          <button
+                            type="button"
+                            onClick={handleSelectAllFilteredGuests}
+                            className="btn-bulk-text"
+                            title="Pilih seluruh tamu di semua halaman"
+                          >
+                            Pilih semua {filteredGuests.length} tamu
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={handleClearSelection}
@@ -1825,24 +1846,29 @@ Salam hangat kami,
                               type="checkbox"
                               className="admin-custom-checkbox"
                               checked={
-                                filteredGuests.length > 0 &&
-                                filteredGuests.every((g) => selectedGuestIds.includes(String(g.id)))
+                                paginatedGuests.length > 0 &&
+                                paginatedGuests.every((g) => selectedGuestIds.includes(String(g.id)))
                               }
                               ref={(el) => {
                                 if (el) {
-                                  const hasSome = filteredGuests.some((g) =>
+                                  const hasSome = paginatedGuests.some((g) =>
                                     selectedGuestIds.includes(String(g.id))
                                   );
                                   const hasAll =
-                                    filteredGuests.length > 0 &&
-                                    filteredGuests.every((g) =>
+                                    paginatedGuests.length > 0 &&
+                                    paginatedGuests.every((g) =>
                                       selectedGuestIds.includes(String(g.id))
                                     );
                                   el.indeterminate = hasSome && !hasAll;
                                 }
                               }}
                               onChange={handleSelectAllGuests}
-                              title="Pilih semua tamu pada daftar ini"
+                              title={
+                                paginatedGuests.length > 0 &&
+                                paginatedGuests.every((g) => selectedGuestIds.includes(String(g.id)))
+                                  ? 'Batal pilih tamu di halaman ini'
+                                  : 'Pilih semua tamu di halaman ini'
+                              }
                             />
                           </th>
                           <th>Nama Tamu</th>
@@ -1861,7 +1887,7 @@ Salam hangat kami,
                             </td>
                           </tr>
                         ) : (
-                          filteredGuests.map((g) => {
+                          paginatedGuests.map((g) => {
                             const isSelected = selectedGuestIds.includes(String(g.id));
                             return (
                               <tr key={g.id} className={isSelected ? 'row-selected' : ''}>
@@ -1956,6 +1982,72 @@ Salam hangat kami,
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Pagination Bar */}
+                  {filteredGuests.length > 0 && (
+                    <div className="table-pagination-row">
+                      <div className="pagination-info">
+                        Menampilkan <strong>{startGuestIdx + 1}</strong> – <strong>{Math.min(startGuestIdx + GUESTS_PER_PAGE, filteredGuests.length)}</strong> dari <strong>{filteredGuests.length}</strong> tamu
+                        {totalGuestPages > 1 && (
+                          <span className="pagination-page-indicator">
+                            (Halaman {validGuestPage} dari {totalGuestPages})
+                          </span>
+                        )}
+                      </div>
+
+                      {totalGuestPages > 1 && (
+                        <div className="pagination-controls">
+                          <button
+                            type="button"
+                            onClick={() => setGuestCurrentPage((prev) => Math.max(prev - 1, 1))}
+                            disabled={validGuestPage <= 1}
+                            className="btn-page-nav"
+                            title="Halaman Sebelumnya"
+                          >
+                            <ChevronLeft size={15} />
+                            <span>Sebelumnya</span>
+                          </button>
+
+                          <div className="page-numbers-group">
+                            {Array.from({ length: totalGuestPages }, (_, i) => i + 1)
+                              .filter((p) => {
+                                if (totalGuestPages <= 7) return true;
+                                if (p === 1 || p === totalGuestPages) return true;
+                                if (Math.abs(p - validGuestPage) <= 1) return true;
+                                return false;
+                              })
+                              .map((p, idx, arr) => {
+                                const prev = arr[idx - 1];
+                                const hasGap = prev && p - prev > 1;
+                                return (
+                                  <React.Fragment key={p}>
+                                    {hasGap && <span className="page-ellipsis">...</span>}
+                                    <button
+                                      type="button"
+                                      onClick={() => setGuestCurrentPage(p)}
+                                      className={`btn-page-num ${validGuestPage === p ? 'active' : ''}`}
+                                    >
+                                      {p}
+                                    </button>
+                                  </React.Fragment>
+                                );
+                              })}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setGuestCurrentPage((prev) => Math.min(prev + 1, totalGuestPages))}
+                            disabled={validGuestPage >= totalGuestPages}
+                            className="btn-page-nav"
+                            title="Halaman Berikutnya"
+                          >
+                            <span>Berikutnya</span>
+                            <ChevronRight size={15} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -4325,6 +4417,110 @@ Salam hangat kami,
         .btn-bulk-delete:disabled {
           opacity: 0.6;
           cursor: not-allowed;
+        }
+
+        /* ========================================================
+           TABLE PAGINATION
+           ======================================================== */
+        .table-pagination-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 0.85rem;
+          margin-top: 1rem;
+          padding-top: 0.9rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .pagination-info {
+          font-size: 0.82rem;
+          color: #bae6fd;
+        }
+
+        .pagination-info strong {
+          color: #ffffff;
+        }
+
+        .pagination-page-indicator {
+          margin-left: 0.4rem;
+          opacity: 0.85;
+          font-size: 0.78rem;
+        }
+
+        .pagination-controls {
+          display: flex;
+          align-items: center;
+          gap: 0.45rem;
+          flex-wrap: wrap;
+        }
+
+        .btn-page-nav {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          background: rgba(255, 255, 255, 0.14);
+          color: #ffffff;
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          padding: 0.38rem 0.75rem;
+          border-radius: 7px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .btn-page-nav:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.25);
+          border-color: rgba(255, 255, 255, 0.4);
+          transform: translateY(-1px);
+        }
+
+        .btn-page-nav:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .page-numbers-group {
+          display: flex;
+          align-items: center;
+          gap: 0.3rem;
+        }
+
+        .btn-page-num {
+          min-width: 32px;
+          height: 32px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 7px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #ffffff;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          padding: 0 0.4rem;
+        }
+
+        .btn-page-num:hover:not(.active) {
+          background: rgba(255, 255, 255, 0.2);
+          border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-page-num.active {
+          background: #ffffff;
+          color: #0050b0;
+          font-weight: 800;
+          border-color: #ffffff;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .page-ellipsis {
+          color: #bae6fd;
+          font-size: 0.8rem;
+          padding: 0 0.2rem;
         }
 
         /* ========================================================
