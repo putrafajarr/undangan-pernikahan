@@ -572,6 +572,33 @@ app.delete('/api/guests/:id', requireAdminAuth, async (req, res) => {
   }
 });
 
+// 11b. Bulk Delete Guests (Dilindungi: Wajib Admin)
+app.post('/api/guests/bulk-delete', requireAdminAuth, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Daftar ID tamu tidak valid' });
+    }
+    await db.deleteGuestsBulk(ids);
+    res.json({ success: true, count: ids.length, message: `${ids.length} tamu berhasil dihapus` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/guests/bulk', requireAdminAuth, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Daftar ID tamu tidak valid' });
+    }
+    await db.deleteGuestsBulk(ids);
+    res.json({ success: true, count: ids.length, message: `${ids.length} tamu berhasil dihapus` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 11. Dashboard Stats (Dilindungi: Wajib Admin)
 app.get('/api/stats', requireAdminAuth, async (req, res) => {
   try {

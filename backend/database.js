@@ -538,6 +538,46 @@ module.exports = {
     return true;
   },
 
+  deleteGuestsBulk: async (ids) => {
+    if (!Array.isArray(ids) || ids.length === 0) return true;
+    const strIds = ids.map(id => String(id));
+    const db = readDb();
+
+    const guestsToDelete = (db.guests || []).filter(g => strIds.includes(String(g.id)));
+    db.guests = (db.guests || []).filter(g => !strIds.includes(String(g.id)));
+
+    // Clean up corresponding wishes
+    const namesToDelete = guestsToDelete
+      .map(g => (g.name || '').trim().toLowerCase())
+      .filter(Boolean);
+
+    if (namesToDelete.length > 0) {
+      db.wishes = (db.wishes || []).filter(w => {
+        return !namesToDelete.includes(String(w.name || '').trim().toLowerCase());
+      });
+      for (const name of namesToDelete) {
+        try {
+          await supabaseFetch(`wedding_wishes?name=ilike.${encodeURIComponent(name)}`, {
+            method: 'DELETE'
+          });
+        } catch (_) {}
+      }
+    }
+
+    writeDb(db);
+
+    // Delete all in Supabase
+    for (const id of strIds) {
+      try {
+        await supabaseFetch(`wedding_guests?id=eq.${encodeURIComponent(id)}`, {
+          method: 'DELETE'
+        });
+      } catch (_) {}
+    }
+
+    return true;
+  },
+
   getStats: async () => {
     const wishes = await module.exports.getWishes();
     const guests = await module.exports.getGuests();

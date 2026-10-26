@@ -141,6 +141,8 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
   const [guests, setGuests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const [selectedGuestIds, setSelectedGuestIds] = useState([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   // Search & Filter state
   const [guestSearchQuery, setGuestSearchQuery] = useState('');
@@ -460,30 +462,46 @@ export default function AdminModal({ isOpen, onClose, invitationData, onUpdateIn
     setLoading(true);
     try {
       const [resStats, resWishes, resGuests] = await Promise.all([
-        adminFetch('/api/stats').then((r) => r.json()),
-        fetch(getApiUrl('/api/wishes')).then((r) => r.json()),
-        adminFetch('/api/guests').then((r) => r.json())
+        adminFetch('/api/stats').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch(getApiUrl('/api/wishes')).then((r) => r.json()).catch(() => ({ success: false })),
+        adminFetch('/api/guests').then((r) => r.json()).catch(() => ({ success: false }))
       ]);
 
-      const deletedWishIds = getDeletedWishIds();
-      const deletedGuestIds = getDeletedGuestIds();
+      if (resStats?.success) setStats(resStats.data);
 
-      if (resStats.success) setStats(resStats.data);
-      if (resWishes.success) {
-        setWishes((resWishes.data || []).filter((w) => !deletedWishIds.includes(String(w.id))));
+      if (resWishes?.success) {
+        const serverWishes = resWishes.data || [];
+        setWishes(serverWishes);
+        const curDeletedWishes = getDeletedWishIds();
+        const activeDeletedWishes = curDeletedWishes.filter((id) =>
+          serverWishes.some((w) => String(w.id) === String(id))
+        );
+        localStorage.setItem('wedding_deleted_wishes', JSON.stringify(activeDeletedWishes));
       }
-      if (resGuests.success) {
+
+      if (resGuests?.success) {
+        const serverGuests = resGuests.data || [];
+        // Gunakan data live Supabase/Server sebagai sumber kebenaran tunggal
+        setGuests(serverGuests);
+        // Selaraskan cache lokal agar tidak menyimpan tamu yang telah dihapus di Supabase
+        localStorage.setItem('wedding_custom_guests', JSON.stringify(serverGuests));
+        // Bersihkan tracking id deleted yang sudah tidak ada di server
+        const curDeletedGuests = getDeletedGuestIds();
+        const activeDeletedGuests = curDeletedGuests.filter((id) =>
+          serverGuests.some((g) => String(g.id) === String(id))
+        );
+        localStorage.setItem('wedding_deleted_guests', JSON.stringify(activeDeletedGuests));
+      } else {
+        // Fallback hanya jika jaringan offline / gagal fetch
         const customGuests = getCustomGuests();
-        const mergedGuests = [...(resGuests.data || [])];
-        customGuests.forEach((cg) => {
-          if (!mergedGuests.some((g) => String(g.id) === String(cg.id))) {
-            mergedGuests.push(cg);
-          }
-        });
-        setGuests(mergedGuests.filter((g) => !deletedGuestIds.includes(String(g.id))));
+        const deletedGuestIds = getDeletedGuestIds();
+        setGuests(customGuests.filter((g) => !deletedGuestIds.includes(String(g.id))));
       }
     } catch (err) {
       console.warn('Failed to load admin data:', err);
+      const customGuests = getCustomGuests();
+      const deletedGuestIds = getDeletedGuestIds();
+      setGuests(customGuests.filter((g) => !deletedGuestIds.includes(String(g.id))));
     } finally {
       setLoading(false);
     }
@@ -969,6 +987,7 @@ Salam hangat kami,
     try {
       addDeletedGuestId(id);
       removeCustomGuest(id);
+      setSelectedGuestIds((prev) => prev.filter((gid) => String(gid) !== String(id)));
       if (guest && guest.name) {
         const cleanName = guest.name.trim().toLowerCase();
         const matchingWishes = wishes.filter(
@@ -987,6 +1006,102 @@ Salam hangat kami,
     } catch (err) {
       showToast(err.message || 'Gagal menghapus tamu');
     }
+  };
+
+  const toggleSelectGuest = (id) => {
+    const idStr = String(id);
+    setSelectedGuestIds((prev) =>
+      prev.includes(idStr) ? prev.filter((x) => x !== idStr) : [...prev, idStr]
+    );
+  };
+
+  const handleSelectAllGuests = () => {
+    if (filteredGuests.length === 0) return;
+    const allFilteredIds = filteredGuests.map((g) => String(g.id));
+    const isAllSelected = allFilteredIds.every((id) => selectedGuestIds.includes(id));
+
+    if (isAllSelected) {
+      setSelectedGuestIds((prev) => prev.filter((id) => !allFilteredIds.includes(id)));
+    } else {
+      setSelectedGuestIds((prev) => {
+        const set = new Set([...prev, ...allFilteredIds]);
+        return Array.from(set);
+      });
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedGuestIds([]);
+  };
+
+  const handleDeleteSelectedGuests = async () => {
+    if (selectedGuestIds.length === 0) return;
+    const count = selectedGuestIds.length;
+    const confirmMsg = `Hapus ${count} tamu yang dicentang dari daftar undangan?\n\n(Semua ucapan doa dari ${count} tamu ini juga akan otomatis ikut dibersihkan)`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsDeletingBulk(true);
+    const toDeleteIds = [...selectedGuestIds];
+
+    // Optimistic UI state update
+    setGuests((prev) => prev.filter((g) => !toDeleteIds.includes(String(g.id))));
+    setSelectedGuestIds([]);
+
+    const guestsToDelete = guests.filter((g) => toDeleteIds.includes(String(g.id)));
+    const namesToDelete = guestsToDelete
+      .map((g) => (g.name || '').trim().toLowerCase())
+      .filter(Boolean);
+
+    if (namesToDelete.length > 0) {
+      setWishes((prev) =>
+        prev.filter((w) => !namesToDelete.includes((w.name || '').trim().toLowerCase()))
+      );
+    }
+
+    try {
+      const res = await adminFetch('/api/guests/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: toDeleteIds })
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast(`Berhasil menghapus ${count} tamu undangan!`);
+      } else {
+        await Promise.all(
+          toDeleteIds.map((id) => adminFetch(`/api/guests/${id}`, { method: 'DELETE' }))
+        );
+        showToast(`Berhasil menghapus ${count} tamu undangan!`);
+      }
+
+      toDeleteIds.forEach((id) => {
+        addDeletedGuestId(id);
+        removeCustomGuest(id);
+      });
+
+      loadAllData();
+    } catch (err) {
+      showToast(err.message || 'Gagal menghapus beberapa tamu');
+      loadAllData();
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
+
+  const handleMarkSelectedSent = (isSent) => {
+    if (selectedGuestIds.length === 0) return;
+    setSentGuestIds((prev) => {
+      let next;
+      if (isSent) {
+        const set = new Set([...prev, ...selectedGuestIds]);
+        next = Array.from(set);
+      } else {
+        next = prev.filter((id) => !selectedGuestIds.includes(id));
+      }
+      localStorage.setItem('wedding_sent_guests', JSON.stringify(next));
+      return next;
+    });
+    showToast(`Status WhatsApp ${selectedGuestIds.length} tamu berhasil diperbarui!`);
   };
 
   const handleDeleteWish = async (id) => {
@@ -1646,10 +1761,90 @@ Salam hangat kami,
                     </div>
                   </div>
 
+                  {/* Toolbar Seleksi & Aksi Massal */}
+                  {selectedGuestIds.length > 0 && (
+                    <div className="bulk-selection-toolbar animate-fade-in">
+                      <div className="bulk-selection-left">
+                        <span className="bulk-selected-badge">
+                          <CheckCircle size={14} />
+                          <span>{selectedGuestIds.length} tamu dipilih</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleClearSelection}
+                          className="btn-bulk-text"
+                          title="Batalkan semua pilihan centang"
+                        >
+                          <X size={13} />
+                          <span>Batal Pilih</span>
+                        </button>
+                      </div>
+                      <div className="bulk-selection-actions">
+                        <button
+                          type="button"
+                          onClick={() => handleMarkSelectedSent(true)}
+                          className="btn-bulk-action"
+                          title="Tandai semua tamu yang dicentang sebagai Terkirim WA"
+                        >
+                          <Check size={13} />
+                          <span>Tandai Terkirim</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMarkSelectedSent(false)}
+                          className="btn-bulk-action"
+                          title="Tandai semua tamu yang dicentang sebagai Belum Kirim"
+                        >
+                          <Clock size={13} />
+                          <span>Tandai Belum Kirim</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDeleteSelectedGuests}
+                          disabled={isDeletingBulk}
+                          className="btn-bulk-delete"
+                          title="Hapus semua tamu yang dicentang beserta ucapan doanya"
+                        >
+                          <Trash2 size={13} />
+                          <span>
+                            {isDeletingBulk
+                              ? 'Menghapus...'
+                              : `Hapus Tamu Terpilih (${selectedGuestIds.length})`}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="table-container">
                     <table className="admin-modern-table">
                       <thead>
                         <tr>
+                          <th style={{ width: '44px', textAlign: 'center', padding: '0.85rem 0.5rem' }}>
+                            <input
+                              type="checkbox"
+                              className="admin-custom-checkbox"
+                              checked={
+                                filteredGuests.length > 0 &&
+                                filteredGuests.every((g) => selectedGuestIds.includes(String(g.id)))
+                              }
+                              ref={(el) => {
+                                if (el) {
+                                  const hasSome = filteredGuests.some((g) =>
+                                    selectedGuestIds.includes(String(g.id))
+                                  );
+                                  const hasAll =
+                                    filteredGuests.length > 0 &&
+                                    filteredGuests.every((g) =>
+                                      selectedGuestIds.includes(String(g.id))
+                                    );
+                                  el.indeterminate = hasSome && !hasAll;
+                                }
+                              }}
+                              onChange={handleSelectAllGuests}
+                              title="Pilih semua tamu pada daftar ini"
+                            />
+                          </th>
                           <th>Nama Tamu</th>
                           <th>No. WhatsApp</th>
                           <th>Status WA</th>
@@ -1659,92 +1854,104 @@ Salam hangat kami,
                       <tbody>
                         {filteredGuests.length === 0 ? (
                           <tr>
-                            <td colSpan={4} className="table-empty-cell">
+                            <td colSpan={5} className="table-empty-cell">
                               {guests.length === 0 
                                 ? 'Belum ada tamu yang disimpan. Masukkan nama tamu pada form di atas.'
                                 : 'Tidak ditemukan tamu yang cocok dengan pencarian.'}
                             </td>
                           </tr>
                         ) : (
-                          filteredGuests.map((g) => (
-                            <tr key={g.id}>
-                              <td>
-                                <div className="guest-name-cell">
-                                  <div className="guest-initial-avatar">
-                                    {g.name.charAt(0).toUpperCase()}
+                          filteredGuests.map((g) => {
+                            const isSelected = selectedGuestIds.includes(String(g.id));
+                            return (
+                              <tr key={g.id} className={isSelected ? 'row-selected' : ''}>
+                                <td style={{ width: '44px', textAlign: 'center', padding: '0.9rem 0.5rem' }}>
+                                  <input
+                                    type="checkbox"
+                                    className="admin-custom-checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleSelectGuest(g.id)}
+                                    title={`Pilih ${g.name}`}
+                                  />
+                                </td>
+                                <td>
+                                  <div className="guest-name-cell">
+                                    <div className="guest-initial-avatar">
+                                      {g.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <strong className="guest-name-text">{g.name}</strong>
+                                      <span className="guest-slug">?to={encodeURIComponent(g.name)}</span>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <strong className="guest-name-text">{g.name}</strong>
-                                    <span className="guest-slug">?to={encodeURIComponent(g.name)}</span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="phone-cell">
-                                {g.phone ? (
-                                  <span className="phone-badge">{g.phone}</span>
-                                ) : (
-                                  <span className="text-muted-dash">-</span>
-                                )}
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleGuestSent(g.id)}
-                                  className={`guest-sent-status-pill ${sentGuestIds.includes(String(g.id)) ? 'sent' : 'unsent'}`}
-                                  title={sentGuestIds.includes(String(g.id)) ? 'Status: Terkirim. Klik untuk ubah ke Belum' : 'Status: Belum Kirim. Klik untuk tandai Terkirim'}
-                                >
-                                  {sentGuestIds.includes(String(g.id)) ? (
-                                    <>
-                                      <CheckCircle size={12} />
-                                      <span>Terkirim</span>
-                                    </>
+                                </td>
+                                <td className="phone-cell">
+                                  {g.phone ? (
+                                    <span className="phone-badge">{g.phone}</span>
                                   ) : (
-                                    <>
-                                      <Clock size={12} />
-                                      <span>Belum Kirim</span>
-                                    </>
+                                    <span className="text-muted-dash">-</span>
                                   )}
-                                </button>
-                              </td>
-                              <td className="text-right">
-                                <div className="table-actions-row">
+                                </td>
+                                <td>
                                   <button
-                                    onClick={() => handleSendWa(g.phone, g.name, g.id)}
-                                    className="btn-action-wa"
-                                    title="Kirim via WhatsApp"
+                                    type="button"
+                                    onClick={() => toggleGuestSent(g.id)}
+                                    className={`guest-sent-status-pill ${sentGuestIds.includes(String(g.id)) ? 'sent' : 'unsent'}`}
+                                    title={sentGuestIds.includes(String(g.id)) ? 'Status: Terkirim. Klik untuk ubah ke Belum' : 'Status: Belum Kirim. Klik untuk tandai Terkirim'}
                                   >
-                                    <Send size={12} />
-                                    <span>Kirim WA</span>
+                                    {sentGuestIds.includes(String(g.id)) ? (
+                                      <>
+                                        <CheckCircle size={12} />
+                                        <span>Terkirim</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Clock size={12} />
+                                        <span>Belum Kirim</span>
+                                      </>
+                                    )}
                                   </button>
-                                  <button
-                                    onClick={() => {
-                                      const textToCopy = compileWaMessage(waTemplate, g.name);
-                                      navigator.clipboard.writeText(textToCopy);
-                                      showToast(`Pesan undangan lengkap untuk ${g.name} berhasil disalin!`);
-                                    }}
-                                    className="btn-action-icon"
-                                    title="Salin Pesan Undangan Lengkap"
-                                  >
-                                    <Copy size={13} />
-                                  </button>
-                                  <button
-                                    onClick={() => startEditGuest(g)}
-                                    className="btn-action-icon"
-                                    title="Edit Data Tamu"
-                                  >
-                                    <Edit3 size={13} />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteGuest(g.id)}
-                                    className="btn-action-icon danger"
-                                    title="Hapus Tamu"
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
+                                </td>
+                                <td className="text-right">
+                                  <div className="table-actions-row">
+                                    <button
+                                      onClick={() => handleSendWa(g.phone, g.name, g.id)}
+                                      className="btn-action-wa"
+                                      title="Kirim via WhatsApp"
+                                    >
+                                      <Send size={12} />
+                                      <span>Kirim WA</span>
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const textToCopy = compileWaMessage(waTemplate, g.name);
+                                        navigator.clipboard.writeText(textToCopy);
+                                        showToast(`Pesan undangan lengkap untuk ${g.name} berhasil disalin!`);
+                                      }}
+                                      className="btn-action-icon"
+                                      title="Salin Pesan Undangan Lengkap"
+                                    >
+                                      <Copy size={13} />
+                                    </button>
+                                    <button
+                                      onClick={() => startEditGuest(g)}
+                                      className="btn-action-icon"
+                                      title="Edit Data Tamu"
+                                    >
+                                      <Edit3 size={13} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteGuest(g.id)}
+                                      className="btn-action-icon danger"
+                                      title="Hapus Tamu"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
@@ -3995,6 +4202,129 @@ Salam hangat kami,
           background: #ef4444;
           border-color: #ef4444;
           color: #ffffff;
+        }
+
+        /* ========================================================
+           CHECKBOX & BULK ACTIONS TOOLBAR
+           ======================================================== */
+        .admin-custom-checkbox {
+          width: 17px;
+          height: 17px;
+          border-radius: 4px;
+          accent-color: #0284c7;
+          cursor: pointer;
+          vertical-align: middle;
+          margin: 0;
+        }
+
+        .row-selected td {
+          background: rgba(2, 132, 199, 0.22) !important;
+        }
+
+        .bulk-selection-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+          background: linear-gradient(135deg, rgba(2, 132, 199, 0.28) 0%, rgba(30, 58, 138, 0.45) 100%);
+          border: 1px solid rgba(125, 211, 252, 0.45);
+          padding: 0.65rem 1rem;
+          border-radius: 10px;
+          margin-top: 0.85rem;
+          margin-bottom: 0.4rem;
+        }
+
+        .bulk-selection-left {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .bulk-selected-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          background: #0284c7;
+          color: #ffffff;
+          font-weight: 700;
+          font-size: 0.82rem;
+          padding: 0.28rem 0.75rem;
+          border-radius: 20px;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-bulk-text {
+          background: transparent;
+          border: none;
+          color: #bae6fd;
+          font-size: 0.8rem;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
+          cursor: pointer;
+          padding: 0.25rem 0.5rem;
+          border-radius: 6px;
+          transition: all 0.2s;
+        }
+
+        .btn-bulk-text:hover {
+          color: #ffffff;
+          background: rgba(255, 255, 255, 0.12);
+        }
+
+        .bulk-selection-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+
+        .btn-bulk-action {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          background: rgba(255, 255, 255, 0.15);
+          color: #ffffff;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          padding: 0.38rem 0.8rem;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .btn-bulk-action:hover {
+          background: rgba(255, 255, 255, 0.25);
+          border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn-bulk-delete {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          background: #ef4444;
+          color: #ffffff;
+          border: 1px solid #f87171;
+          padding: 0.38rem 0.9rem;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+        }
+
+        .btn-bulk-delete:hover:not(:disabled) {
+          background: #dc2626;
+          box-shadow: 0 4px 12px rgba(220, 38, 38, 0.45);
+          transform: translateY(-1px);
+        }
+
+        .btn-bulk-delete:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         /* ========================================================
